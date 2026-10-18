@@ -1,36 +1,155 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ApexERP — Enterprise Resource Planning System
 
-## Getting Started
+A modern, high-performance, full-featured **Enterprise Resource Planning (ERP)** system built with **Next.js 16 (App Router)**, **TypeScript**, **Tailwind CSS**, and **Neon Serverless PostgreSQL** using **Drizzle ORM**.
 
-First, run the development server:
+---
+
+## 🌟 Key Architecture & Capabilities
+
+ApexERP is architected as a modular enterprise platform designed for scale, high reliability, and speed:
+
+- **Next.js 16 App Router & Turbopack**: Blazing-fast page loads, server components, and responsive client interactions.
+- **Neon Serverless PostgreSQL**: Native HTTP driver integration (`@neondatabase/serverless` & `drizzle-orm/neon-http`) with zero connection pool exhaustion and instant scale-to-zero compute.
+- **Dual-Mode Data Engine**: Out-of-the-box in-memory enterprise repository with realistic demo data, with instant 1-click schema migration and seeding to live Neon PostgreSQL.
+- **Role-Based Workflows**: Pre-configured profiles for CEO/Admin, Chief Financial Officer, Supply Chain Director, Sales Lead, and People Operations.
+- **Interactive Financial Visualizations**: Clean, responsive SVG-based charts for revenue, operational expenditures, profit margins, and warehouse inventory distribution.
+
+---
+
+## 🚀 ERP Core Modules
+
+### 1. Executive Dashboard (`/`)
+- Real-time financial KPIs (Total Revenue, Net Margin, Active Orders, Low Stock Alerts, Total Headcount, Receivables).
+- 6-month Revenue vs. Expense trend interactive chart with hover breakdowns.
+- Inventory distribution donut chart by category.
+- Recent sales order pipeline and automated low-stock warnings with 1-click reorder shortcuts.
+- Real-time system audit logs.
+
+### 2. Sales & Client CRM (`/sales`)
+- **Sales Orders**: Lifecycle management (Draft, Confirmed, Processing, Shipped, Delivered) with automatic inventory deduction upon order creation.
+- **Customers & CRM**: Customer directory, company entities, credit limit tracking, and outstanding balances.
+- **Invoices & Commercial Billing**: Automatic invoice generation with subtotal, tax (10%), and status tracking (Paid, Partial, Unpaid).
+- **Printable Commercial Invoice**: Ready-to-print branded invoices with letterhead, payment terms, and PDF export formatting.
+
+### 3. Inventory & Warehousing (`/inventory`)
+- Product catalog with SKU, categories, cost price, selling price, and profit margins.
+- Stock health indicators (`Healthy Stock`, `Low Stock`, `Out of Stock`) based on minimum threshold safety buffers.
+- Warehouse bin location tracking (e.g., *Zone A - Rack 04*).
+- **Stock Adjustment Modal**: Audit-backed inventory adjustments (+ Stock In / - Stock Out with reasons).
+
+### 4. Purchasing & Procurement (`/purchasing`)
+- **Approved Suppliers**: Vendor registry, account contacts, payment terms (Net 30, Net 45), and star ratings.
+- **Purchase Orders (PO)**: Creation and tracking.
+- **Goods Receipt Automation**: Clicking **"Receive Goods"** automatically updates product stock and logs an expense into the General Ledger.
+
+### 5. Finance & General Ledger (`/finance`)
+- Double-entry-style transaction journal (Income, Operational Expenses).
+- Category allocations (Product Sales, Cloud Infrastructure, Raw Materials, Payroll, Freight, Consulting).
+- Real-time Net Operating Profit and Cash Flow margin calculation.
+- **CSV Export**: 1-click download of the complete audited transaction ledger.
+
+### 6. Human Resources & Payroll (`/hr`)
+- Staff directory across Engineering, Finance, Operations, Sales, and People Ops.
+- Compensation tracker with monthly payroll commitments and annual run-rate calculator.
+- **Onboard Employee**: Fast modal to add team members with compensation and department allocations.
+
+### 7. Manufacturing & Operations (`/operations`)
+- Kanban-style Work Order pipeline (`Pending` → `In Progress` → `Quality Review` → `Completed`).
+- Progress percentage trackers, priority levels (`Low`, `Medium`, `High`, `Urgent`), and lead engineer assignments.
+
+### 8. Settings & Neon DB Studio (`/settings`)
+- **Neon PostgreSQL Connection Center**:
+  - Live status indicator and ping test (measures database roundtrip latency in ms).
+  - Custom connection string validator.
+  - **1-Click Seed Neon Database**: Pushes all 12 Postgres tables (`users`, `customers`, `products`, `sales_orders`, `purchase_orders`, `invoices`, `financial_transactions`, `employees`, `work_orders`, `audit_logs`) and populates them with sample enterprise data.
+- **Company Profile**: Legal entity name, Tax ID / EIN, accounting currency (`USD`, `EUR`, `GBP`, `INR`), and fiscal year.
+- **RBAC Permissions Matrix**: Visual breakdown of module permissions.
+- **System Audit Trail**: Complete activity journal with actor, action, and timestamp.
+
+---
+
+## 🛠️ Quick Start Guide
+
+### 1. Installation
+
+```bash
+# Clone the repository
+cd atb-erp
+
+# Install dependencies (already installed)
+npm install
+```
+
+### 2. Configure Neon PostgreSQL (Optional)
+
+The system works **out of the box immediately** even without a database URL configured (using the built-in enterprise store). 
+
+To connect your live Neon database:
+1. Create a free account at [neon.tech](https://neon.tech).
+2. Create a new PostgreSQL database.
+3. Copy your connection string into `.env.local`:
+
+```env
+DATABASE_URL="postgresql://neondb_owner:your_password@ep-sample-123456.us-east-2.aws.neon.tech/neondb?sslmode=require"
+```
+
+### 3. Run Development Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🗄️ Database Commands
 
-## Learn More
+- `npm run db:generate` — Generate Drizzle migrations from schema.
+- `npm run db:push` — Push schema directly to Neon PostgreSQL.
+- `npm run db:studio` — Open Drizzle Studio web GUI.
+- `npm run db:seed` — Test database connection and seed Neon with enterprise data.
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📁 Project Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+├── drizzle.config.ts           # Drizzle ORM configuration for Neon
+├── scripts/
+│   └── seed.mjs                # CLI database connection & seed script
+├── src/
+│   ├── app/
+│   │   ├── api/                # API routes (db/test, db/seed, sales, inventory, finance, hr, purchasing)
+│   │   ├── finance/page.tsx    # General Ledger & Cash Flow module
+│   │   ├── hr/page.tsx         # HR & Payroll module
+│   │   ├── inventory/page.tsx  # Product catalog & Warehousing module
+│   │   ├── operations/page.tsx # Manufacturing & Kanban Work Orders
+│   │   ├── purchasing/page.tsx # Suppliers & PO module
+│   │   ├── sales/page.tsx      # Sales Orders, CRM, and Invoices
+│   │   ├── settings/page.tsx   # Neon DB Studio & Settings
+│   │   ├── globals.css         # Tailwind CSS v4 styles
+│   │   ├── layout.tsx          # Root ERP layout with Geist font
+│   │   └── page.tsx            # Executive Dashboard
+│   ├── components/
+│   │   ├── charts/             # Interactive SVG Financial & Category charts
+│   │   ├── layout/             # Sidebar, Topbar, and DashboardLayout shell
+│   │   └── ui/                 # StatCard, Modal, and UI primitives
+│   ├── db/
+│   │   ├── index.ts            # Neon client initialization & validation
+│   │   └── schema.ts           # Drizzle PostgreSQL schema (12 tables)
+│   └── lib/
+│       ├── data-service.ts     # Unified database service with Neon + in-memory store
+│       └── mock-data.ts        # Enterprise seed data models and presets
+```
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🔒 Production Build
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+To produce an optimized production bundle:
+
+```bash
+npm run build
+npm run start
+```
