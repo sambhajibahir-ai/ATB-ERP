@@ -61,14 +61,14 @@ export function Sidebar() {
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5">
                 <span className="text-base font-bold tracking-tight text-slate-900 dark:text-white">
-                  ApexERP
+                  ATB ERP
                 </span>
                 <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900">
                   PRO
                 </span>
               </div>
               <span className="text-[11px] text-slate-400 font-medium truncate max-w-[120px]">
-                Global Technologies
+                ATB Software
               </span>
             </div>
           </Link>

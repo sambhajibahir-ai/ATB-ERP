@@ -41,8 +41,8 @@ export default function SettingsPage() {
   } | null>(null);
 
   // Company Profile State
-  const [companyName, setCompanyName] = useState('Apex Global Technologies Inc.');
-  const [taxId, setTaxId] = useState('US-EIN-98442109');
+  const [companyName, setCompanyName] = useState('ATB Software');
+  const [taxId, setTaxId] = useState('ATB-REG-2026-99');
   const [currency, setCurrency] = useState('USD ($)');
   const [fiscalYear, setFiscalYear] = useState('January 1 - December 31');
   const [companySaved, setCompanySaved] = useState(false);
@@ -67,7 +67,7 @@ export default function SettingsPage() {
             actor: 'Alexander Wright (CEO)',
             action: 'Approved Sales Order',
             module: 'Sales & CRM',
-            details: 'Approved SO-2026-0089 for TechCorp Solutions ($33,100.00)',
+            details: 'Approved SO-2026-0089 for Enterprise Solutions Partner ($33,100.00)',
             createdAt: '2026-03-01T10:30:00Z',
           },
           {
@@ -83,7 +83,7 @@ export default function SettingsPage() {
             actor: 'Jessica Taylor (Supply Chain)',
             action: 'Dispatched Goods',
             module: 'Inventory',
-            details: 'Marked 4x ELC-SRV-900 and 1x NET-SW-100G as dispatched via FedEx',
+            details: 'Marked 4x ELC-SRV-900 and 1x NET-SW-100G as dispatched via express freight',
             createdAt: '2026-03-04T15:20:00Z',
           },
           {

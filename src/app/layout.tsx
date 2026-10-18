@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ApexERP • Modern Enterprise Resource Planning Suite",
-  description: "Enterprise ERP System built with Next.js App Router and Neon Serverless PostgreSQL database.",
+  title: "ATB ERP • ATB Software Enterprise Management Suite",
+  description: "ATB Software Enterprise Resource Planning system powered by Next.js and Neon Serverless PostgreSQL.",
 };
 
 export default function RootLayout({

@@ -28,7 +28,7 @@ export default async function DashboardPage() {
         <div className="relative z-10 max-w-2xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-xs font-semibold text-blue-200 mb-3 border border-white/10">
             <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-            <span>Enterprise ERP Suite v2.6 • Neon Postgres Powered</span>
+            <span>ATB Software Enterprise ERP Suite • Neon Postgres Powered</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
             Welcome back, Alexander

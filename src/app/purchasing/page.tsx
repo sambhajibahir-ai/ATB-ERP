@@ -416,7 +416,7 @@ export default function PurchasingPage() {
               required
               value={supName}
               onChange={(e) => setSupName(e.target.value)}
-              placeholder="e.g. Foxconn Industrial Assemblies"
+              placeholder="e.g. Precision Components Manufacturing"
               className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white"
             />
           </div>

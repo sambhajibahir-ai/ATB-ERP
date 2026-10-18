@@ -564,7 +564,7 @@ export default function SalesPage() {
               required
               value={newCustCompany}
               onChange={(e) => setNewCustCompany(e.target.value)}
-              placeholder="e.g. Apex Global Corp"
+              placeholder="e.g. Continental Enterprise Partner"
               className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white"
             />
           </div>
@@ -639,12 +639,12 @@ export default function SalesPage() {
             <div className="flex justify-between items-start pb-6 border-b border-slate-200 dark:border-slate-800">
               <div>
                 <h2 className="text-xl font-black tracking-tight text-blue-600 dark:text-blue-400">
-                  ApexERP Enterprise Inc.
+                  ATB Software
                 </h2>
                 <p className="text-xs text-slate-500 mt-1">
-                  100 Tech Boulevard, Level 32, Austin, TX 78701
+                  ATB Software Enterprise Operations
                   <br />
-                  Tax ID: US-EIN-98442109 • billing@apexcorp.io
+                  Registration: ATB-REG-2026-99 • billing@atbsoftware.com
                 </p>
               </div>
 

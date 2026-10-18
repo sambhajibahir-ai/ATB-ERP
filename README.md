@@ -1,12 +1,21 @@
-# ApexERP — Enterprise Resource Planning System
+# ATB ERP — ATB Software Enterprise Resource Planning System
 
-A modern, high-performance, full-featured **Enterprise Resource Planning (ERP)** system built with **Next.js 16 (App Router)**, **TypeScript**, **Tailwind CSS**, and **Neon Serverless PostgreSQL** using **Drizzle ORM**.
+A modern, high-performance, full-featured **Enterprise Resource Planning (ERP)** system built for **ATB Software** using **Next.js 16 (App Router)**, **TypeScript**, **Tailwind CSS**, and **Neon Serverless PostgreSQL** with **Drizzle ORM**.
+
+---
+
+## 🏛️ Legal & Entity Notice
+
+- **System Owner / Legal Entity**: **ATB Software**
+- **Commercial Identification**: `ATB-REG-2026-99`
+- **Official Billing Domain**: `billing@atbsoftware.com`
+- **Notice**: This software and its associated database architectures are proprietary to ATB Software. All sample client, partner, vendor, and transactional records provided in default seed sets are purely illustrative and fictional for testing and demonstration purposes.
 
 ---
 
 ## 🌟 Key Architecture & Capabilities
 
-ApexERP is architected as a modular enterprise platform designed for scale, high reliability, and speed:
+ATB ERP is architected as a modular enterprise platform designed for scale, high reliability, and speed:
 
 - **Next.js 16 App Router & Turbopack**: Blazing-fast page loads, server components, and responsive client interactions.
 - **Neon Serverless PostgreSQL**: Native HTTP driver integration (`@neondatabase/serverless` & `drizzle-orm/neon-http`) with zero connection pool exhaustion and instant scale-to-zero compute.
@@ -29,7 +38,7 @@ ApexERP is architected as a modular enterprise platform designed for scale, high
 - **Sales Orders**: Lifecycle management (Draft, Confirmed, Processing, Shipped, Delivered) with automatic inventory deduction upon order creation.
 - **Customers & CRM**: Customer directory, company entities, credit limit tracking, and outstanding balances.
 - **Invoices & Commercial Billing**: Automatic invoice generation with subtotal, tax (10%), and status tracking (Paid, Partial, Unpaid).
-- **Printable Commercial Invoice**: Ready-to-print branded invoices with letterhead, payment terms, and PDF export formatting.
+- **Printable Commercial Invoice**: Ready-to-print branded invoices with ATB Software letterhead, payment terms, and PDF export formatting.
 
 ### 3. Inventory & Warehousing (`/inventory`)
 - Product catalog with SKU, categories, cost price, selling price, and profit margins.
@@ -60,9 +69,9 @@ ApexERP is architected as a modular enterprise platform designed for scale, high
 ### 8. Settings & Neon DB Studio (`/settings`)
 - **Neon PostgreSQL Connection Center**:
   - Live status indicator and ping test (measures database roundtrip latency in ms).
-  - Custom connection string validator.
+  - Connection validator for custom Neon connection strings.
   - **1-Click Seed Neon Database**: Pushes all 12 Postgres tables (`users`, `customers`, `products`, `sales_orders`, `purchase_orders`, `invoices`, `financial_transactions`, `employees`, `work_orders`, `audit_logs`) and populates them with sample enterprise data.
-- **Company Profile**: Legal entity name, Tax ID / EIN, accounting currency (`USD`, `EUR`, `GBP`, `INR`), and fiscal year.
+- **Company Profile**: Legal entity name (**ATB Software**), Registration ID (`ATB-REG-2026-99`), accounting currency (`USD`, `EUR`, `GBP`, `INR`), and fiscal year.
 - **RBAC Permissions Matrix**: Visual breakdown of module permissions.
 - **System Audit Trail**: Complete activity journal with actor, action, and timestamp.
 
@@ -109,47 +118,3 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 - `npm run db:push` — Push schema directly to Neon PostgreSQL.
 - `npm run db:studio` — Open Drizzle Studio web GUI.
 - `npm run db:seed` — Test database connection and seed Neon with enterprise data.
-
----
-
-## 📁 Project Structure
-
-```
-├── drizzle.config.ts           # Drizzle ORM configuration for Neon
-├── scripts/
-│   └── seed.mjs                # CLI database connection & seed script
-├── src/
-│   ├── app/
-│   │   ├── api/                # API routes (db/test, db/seed, sales, inventory, finance, hr, purchasing)
-│   │   ├── finance/page.tsx    # General Ledger & Cash Flow module
-│   │   ├── hr/page.tsx         # HR & Payroll module
-│   │   ├── inventory/page.tsx  # Product catalog & Warehousing module
-│   │   ├── operations/page.tsx # Manufacturing & Kanban Work Orders
-│   │   ├── purchasing/page.tsx # Suppliers & PO module
-│   │   ├── sales/page.tsx      # Sales Orders, CRM, and Invoices
-│   │   ├── settings/page.tsx   # Neon DB Studio & Settings
-│   │   ├── globals.css         # Tailwind CSS v4 styles
-│   │   ├── layout.tsx          # Root ERP layout with Geist font
-│   │   └── page.tsx            # Executive Dashboard
-│   ├── components/
-│   │   ├── charts/             # Interactive SVG Financial & Category charts
-│   │   ├── layout/             # Sidebar, Topbar, and DashboardLayout shell
-│   │   └── ui/                 # StatCard, Modal, and UI primitives
-│   ├── db/
-│   │   ├── index.ts            # Neon client initialization & validation
-│   │   └── schema.ts           # Drizzle PostgreSQL schema (12 tables)
-│   └── lib/
-│       ├── data-service.ts     # Unified database service with Neon + in-memory store
-│       └── mock-data.ts        # Enterprise seed data models and presets
-```
-
----
-
-## 🔒 Production Build
-
-To produce an optimized production bundle:
-
-```bash
-npm run build
-npm run start
-```

@@ -373,7 +373,7 @@ export default function FinancePage() {
               type="text"
               value={txRef}
               onChange={(e) => setTxRef(e.target.value)}
-              placeholder="e.g. AWS-INV-77981, WT-99231"
+              placeholder="e.g. CLOUD-INV-77981, WT-99231"
               className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white"
             />
           </div>

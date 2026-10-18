@@ -22,7 +22,7 @@ export default function OperationsPage() {
 
   // New Work Order Form
   const [title, setTitle] = useState('');
-  const [productName, setProductName] = useState('Apex HyperCluster Server Node X9');
+  const [productName, setProductName] = useState('ATB HyperCluster Server Node X9');
   const [quantity, setQuantity] = useState('10');
   const [priority, setPriority] = useState<WorkOrder['priority']>('High');
   const [assignedTo, setAssignedTo] = useState('Hardware Test Lab Team');
@@ -40,7 +40,7 @@ export default function OperationsPage() {
           id: 1,
           orderNumber: 'WO-2026-0301',
           title: 'Precision Assembly: 10x Server Node X9 Units',
-          productName: 'Apex HyperCluster Server Node X9',
+          productName: 'ATB HyperCluster Server Node X9',
           quantity: 10,
           priority: 'High',
           status: 'In Progress',
@@ -55,7 +55,7 @@ export default function OperationsPage() {
           id: 2,
           orderNumber: 'WO-2026-0302',
           title: 'Firmware Flash & Quality Calibration for IoT Sensors',
-          productName: 'Industrial IoT Telemetry Sensor Suite',
+          productName: 'ATB Industrial IoT Telemetry Sensor Suite',
           quantity: 50,
           priority: 'Urgent',
           status: 'Quality Review',

@@ -38,7 +38,7 @@ class EnterpriseDataStore {
   auditLogs: AuditLog[] = [...initialAuditLogs];
 }
 
-const globalStoreKey = Symbol.for('apex_erp_store');
+const globalStoreKey = Symbol.for('atb_software_erp_store');
 const globalAny = globalThis as unknown as { [key: symbol]: EnterpriseDataStore };
 
 if (!globalAny[globalStoreKey]) {

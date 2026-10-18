@@ -283,7 +283,7 @@ export default function HRPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="e.g. liam.v@apextowers.com"
+              placeholder="e.g. liam.v@atbsoftware.com"
               className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white"
             />
           </div>
