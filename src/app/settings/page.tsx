@@ -64,15 +64,15 @@ export default function SettingsPage() {
         const defaultLogs: AuditLog[] = [
           {
             id: 1,
-            actor: 'Alexander Wright (CEO)',
+            actor: 'Aarav Mehta (CEO)',
             action: 'Approved Sales Order',
             module: 'Sales & CRM',
-            details: 'Approved SO-2026-0089 for Enterprise Solutions Partner ($33,100.00)',
+            details: 'Approved SO-2026-0089 for Sharma Infotech Solutions ($33,100.00)',
             createdAt: '2026-03-01T10:30:00Z',
           },
           {
             id: 2,
-            actor: 'Sophia Martinez (CFO)',
+            actor: 'Ananya Iyer (CFO)',
             action: 'Recorded Payment',
             module: 'Finance & Accounts',
             details: 'Reconciled wire transfer WT-882910 of $33,100.00 against INV-2026-0045',
@@ -80,7 +80,7 @@ export default function SettingsPage() {
           },
           {
             id: 3,
-            actor: 'Jessica Taylor (Supply Chain)',
+            actor: 'Sneha Kulkarni (Supply Chain)',
             action: 'Dispatched Goods',
             module: 'Inventory',
             details: 'Marked 4x ELC-SRV-900 and 1x NET-SW-100G as dispatched via express freight',

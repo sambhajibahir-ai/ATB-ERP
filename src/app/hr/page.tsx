@@ -255,7 +255,7 @@ export default function HRPage() {
                 required
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
-                placeholder="e.g. Liam"
+                placeholder="e.g. Arjun"
                 className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white"
               />
             </div>
@@ -268,7 +268,7 @@ export default function HRPage() {
                 required
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
-                placeholder="e.g. Vance"
+                placeholder="e.g. Sharma"
                 className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white"
               />
             </div>
@@ -283,7 +283,7 @@ export default function HRPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="e.g. liam.v@atbsoftware.com"
+              placeholder="e.g. arjun.s@atbsoftware.com"
               className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white"
             />
           </div>

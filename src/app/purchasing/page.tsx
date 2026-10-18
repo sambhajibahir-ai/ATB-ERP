@@ -416,7 +416,7 @@ export default function PurchasingPage() {
               required
               value={supName}
               onChange={(e) => setSupName(e.target.value)}
-              placeholder="e.g. Precision Components Manufacturing"
+              placeholder="e.g. Hindusthan Precision Tooling Pvt Ltd"
               className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white"
             />
           </div>
@@ -430,7 +430,7 @@ export default function PurchasingPage() {
                 required
                 value={supContact}
                 onChange={(e) => setSupContact(e.target.value)}
-                placeholder="e.g. Kenji Tanaka"
+                placeholder="e.g. Suresh Nambiar"
                 className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white"
               />
             </div>
@@ -443,7 +443,7 @@ export default function PurchasingPage() {
                 required
                 value={supEmail}
                 onChange={(e) => setSupEmail(e.target.value)}
-                placeholder="e.g. orders@vendor.com"
+                placeholder="e.g. orders@hindusthan-tooling.co.in"
                 className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white"
               />
             </div>

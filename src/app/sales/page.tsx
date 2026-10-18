@@ -564,7 +564,7 @@ export default function SalesPage() {
               required
               value={newCustCompany}
               onChange={(e) => setNewCustCompany(e.target.value)}
-              placeholder="e.g. Continental Enterprise Partner"
+              placeholder="e.g. Bharat Dynamics Solutions Pvt Ltd"
               className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white"
             />
           </div>
@@ -578,7 +578,7 @@ export default function SalesPage() {
                 required
                 value={newCustName}
                 onChange={(e) => setNewCustName(e.target.value)}
-                placeholder="e.g. Eleanor Vance"
+                placeholder="e.g. Rohit Bansal"
                 className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white"
               />
             </div>
@@ -591,7 +591,7 @@ export default function SalesPage() {
                 required
                 value={newCustEmail}
                 onChange={(e) => setNewCustEmail(e.target.value)}
-                placeholder="e.g. accounts@client.com"
+                placeholder="e.g. accounts@client.co.in"
                 className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white"
               />
             </div>

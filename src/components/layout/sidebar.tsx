@@ -32,10 +32,10 @@ const navigationItems = [
 ];
 
 const ROLES = [
-  { name: 'Alexander Wright', title: 'System Administrator (CEO)', role: 'Admin' },
-  { name: 'Sophia Martinez', title: 'Chief Financial Officer', role: 'Finance' },
-  { name: 'Jessica Taylor', title: 'Director of Supply Chain', role: 'Inventory' },
-  { name: 'Maya Lin', title: 'People Operations Lead', role: 'HR' },
+  { name: 'Aarav Mehta', title: 'System Administrator (CEO)', role: 'Admin' },
+  { name: 'Ananya Iyer', title: 'Chief Financial Officer', role: 'Finance' },
+  { name: 'Sneha Kulkarni', title: 'Director of Supply Chain', role: 'Inventory' },
+  { name: 'Pooja Reddy', title: 'People Operations Lead', role: 'HR' },
 ];
 
 export function Sidebar() {

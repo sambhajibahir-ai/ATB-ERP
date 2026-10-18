@@ -31,7 +31,7 @@ export default async function DashboardPage() {
             <span>ATB Software Enterprise ERP Suite • Neon Postgres Powered</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-            Welcome back, Alexander
+            Welcome back, Aarav
           </h1>
           <p className="mt-2 text-sm text-blue-100/90 leading-relaxed">
             Company operations are performing with robust margins. Cash reserves are healthy,
