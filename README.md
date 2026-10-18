@@ -118,3 +118,4 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 - `npm run db:push` — Push schema directly to Neon PostgreSQL.
 - `npm run db:studio` — Open Drizzle Studio web GUI.
 - `npm run db:seed` — Test database connection and seed Neon with enterprise data.
+"# ATB-ERP" 
