@@ -152,7 +152,7 @@ export default async function DashboardPage() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full text-left text-xs whitespace-nowrap">
               <thead>
                 <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400 uppercase text-[10px] tracking-wider">
                   <th className="pb-3 font-semibold">Order</th>
@@ -280,7 +280,7 @@ export default async function DashboardPage() {
         <div className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
           {metrics.recentLogs.map((log) => (
             <div key={log.id} className="py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-              <div className="flex items-center gap-2.5">
+              <div className="flex flex-wrap items-center gap-2.5">
                 <span className="w-2 h-2 rounded-full bg-blue-500" />
                 <span className="font-semibold text-slate-900 dark:text-white">
                   {log.actor}

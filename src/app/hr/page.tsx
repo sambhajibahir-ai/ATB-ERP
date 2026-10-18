@@ -165,12 +165,12 @@ export default function HRPage() {
           />
         </div>
 
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <Filter className="w-4 h-4 text-slate-400" />
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Filter className="w-4 h-4 text-slate-400 shrink-0" />
           <select
             value={deptFilter}
             onChange={(e) => setDeptFilter(e.target.value)}
-            className="text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-2 text-slate-700 dark:text-slate-300 focus:outline-none"
+            className="text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-2 text-slate-700 dark:text-slate-300 focus:outline-none w-full sm:w-auto"
           >
             <option value="ALL">All Departments</option>
             {departmentsList.map((d) => (
@@ -245,7 +245,7 @@ export default function HRPage() {
         description="Add employee to directory, assign department, and configure compensation."
       >
         <form onSubmit={handleAddEmployee} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 First Name
@@ -288,7 +288,7 @@ export default function HRPage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Department

@@ -190,7 +190,7 @@ export default function SalesPage() {
       </div>
 
       {/* Tabs Switcher */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800">
+      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 overflow-x-auto whitespace-nowrap pb-px">
         <button
           onClick={() => setActiveTab('orders')}
           className={`pb-3 px-3 text-xs font-semibold border-b-2 transition-all ${
@@ -239,12 +239,12 @@ export default function SalesPage() {
               />
             </div>
 
-            <div className="flex items-center gap-2 self-start sm:self-auto">
-              <Filter className="w-4 h-4 text-slate-400" />
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Filter className="w-4 h-4 text-slate-400 shrink-0" />
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-2 text-slate-700 dark:text-slate-300 focus:outline-none"
+                className="text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-2 text-slate-700 dark:text-slate-300 focus:outline-none w-full sm:w-auto"
               >
                 <option value="ALL">All Order Statuses</option>
                 <option value="Confirmed">Confirmed</option>
@@ -258,7 +258,7 @@ export default function SalesPage() {
           {/* Orders Table */}
           <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-xs">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="w-full text-left text-xs whitespace-nowrap">
                 <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-slate-500 uppercase text-[10px] tracking-wider">
                   <tr>
                     <th className="py-3 px-4 font-semibold">Order #</th>
@@ -385,7 +385,7 @@ export default function SalesPage() {
         <div className="space-y-4">
           <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-xs">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="w-full text-left text-xs whitespace-nowrap">
                 <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-slate-500 uppercase text-[10px] tracking-wider">
                   <tr>
                     <th className="py-3 px-4 font-semibold">Invoice #</th>
@@ -485,8 +485,8 @@ export default function SalesPage() {
             </select>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            <div className="col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="sm:col-span-2">
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Select Product SKU
               </label>
@@ -568,7 +568,7 @@ export default function SalesPage() {
               className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white"
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Primary Contact Person
@@ -636,7 +636,7 @@ export default function SalesPage() {
         {selectedInvoice && (
           <div className="space-y-6 bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 rounded-xl">
             {/* Invoice Header */}
-            <div className="flex justify-between items-start pb-6 border-b border-slate-200 dark:border-slate-800">
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-6 border-b border-slate-200 dark:border-slate-800">
               <div>
                 <h2 className="text-xl font-black tracking-tight text-blue-600 dark:text-blue-400">
                   ATB Software
@@ -648,7 +648,7 @@ export default function SalesPage() {
                 </p>
               </div>
 
-              <div className="text-right">
+              <div className="text-left sm:text-right">
                 <span className="font-mono text-xs font-bold text-slate-400 uppercase">
                   Invoice Ref
                 </span>
@@ -670,7 +670,7 @@ export default function SalesPage() {
             </div>
 
             {/* Bill To & Metadata */}
-            <div className="grid grid-cols-2 gap-6 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 text-xs">
               <div>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                   Billed To
@@ -685,7 +685,7 @@ export default function SalesPage() {
                 </p>
               </div>
 
-              <div className="space-y-1 text-right">
+              <div className="space-y-1 text-left sm:text-right">
                 <div>
                   <span className="text-slate-400">Issue Date: </span>
                   <span className="font-semibold text-slate-900 dark:text-white">
@@ -702,38 +702,40 @@ export default function SalesPage() {
             </div>
 
             {/* Item Rows Table */}
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 dark:bg-slate-800/60 border-y border-slate-200 dark:border-slate-800 text-slate-500 uppercase text-[10px]">
-                <tr>
-                  <th className="py-2.5 px-3">Description</th>
-                  <th className="py-2.5 px-3">SKU</th>
-                  <th className="py-2.5 px-3 text-center">Qty</th>
-                  <th className="py-2.5 px-3 text-right">Unit Price</th>
-                  <th className="py-2.5 px-3 text-right">Amount</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {selectedInvoice.itemsJson.map((item, idx) => (
-                  <tr key={idx}>
-                    <td className="py-3 px-3 font-semibold text-slate-900 dark:text-white">
-                      {item.productName}
-                    </td>
-                    <td className="py-3 px-3 font-mono text-slate-500">{item.sku}</td>
-                    <td className="py-3 px-3 text-center">{item.quantity}</td>
-                    <td className="py-3 px-3 text-right font-mono">
-                      ${item.unitPrice.toLocaleString()}
-                    </td>
-                    <td className="py-3 px-3 text-right font-mono font-bold text-slate-900 dark:text-white">
-                      ${item.total.toLocaleString()}
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs whitespace-nowrap">
+                <thead className="bg-slate-50 dark:bg-slate-800/60 border-y border-slate-200 dark:border-slate-800 text-slate-500 uppercase text-[10px]">
+                  <tr>
+                    <th className="py-2.5 px-3">Description</th>
+                    <th className="py-2.5 px-3">SKU</th>
+                    <th className="py-2.5 px-3 text-center">Qty</th>
+                    <th className="py-2.5 px-3 text-right">Unit Price</th>
+                    <th className="py-2.5 px-3 text-right">Amount</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {selectedInvoice.itemsJson.map((item, idx) => (
+                    <tr key={idx}>
+                      <td className="py-3 px-3 font-semibold text-slate-900 dark:text-white">
+                        {item.productName}
+                      </td>
+                      <td className="py-3 px-3 font-mono text-slate-500">{item.sku}</td>
+                      <td className="py-3 px-3 text-center">{item.quantity}</td>
+                      <td className="py-3 px-3 text-right font-mono">
+                        ${item.unitPrice.toLocaleString()}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono font-bold text-slate-900 dark:text-white">
+                        ${item.total.toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
             {/* Totals Calculation */}
             <div className="flex justify-end pt-4 border-t border-slate-200 dark:border-slate-800">
-              <div className="w-64 space-y-1.5 text-xs">
+              <div className="w-full sm:w-64 space-y-1.5 text-xs">
                 <div className="flex justify-between text-slate-500">
                   <span>Subtotal:</span>
                   <span className="font-mono">${selectedInvoice.subtotal.toLocaleString()}</span>
@@ -750,14 +752,14 @@ export default function SalesPage() {
             </div>
 
             {/* Print action buttons */}
-            <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-800">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
               <p className="text-[11px] text-slate-400 italic">
                 {selectedInvoice.terms}
               </p>
               <div className="flex gap-2">
                 <button
                   onClick={() => window.print()}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-bold hover:opacity-90"
+                  className="flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-bold hover:opacity-90 w-full sm:w-auto"
                 >
                   <Printer className="w-3.5 h-3.5" />
                   <span>Print / PDF</span>
