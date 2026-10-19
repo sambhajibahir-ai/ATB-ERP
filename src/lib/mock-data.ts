@@ -101,7 +101,10 @@ export interface PurchaseOrder {
   orderDate: string;
   expectedDelivery: string;
   totalAmount: number;
-  status: 'Draft' | 'Ordered' | 'Partially Received' | 'Received' | 'Cancelled';
+  status: 'Draft' | 'Pending Review' | 'Approved' | 'Rejected' | 'Ordered' | 'Partially Received' | 'Received' | 'Cancelled';
+  approvedBy?: string;
+  approvedAt?: string;
+  rejectionReason?: string;
   itemsJson: OrderItem[];
   notes?: string;
   createdAt: string;
@@ -709,11 +712,13 @@ export const initialPurchaseOrders: PurchaseOrder[] = [
     expectedDelivery: '2026-03-15T18:00:00Z',
     totalAmount: 18500.0,
     status: 'Received',
+    approvedBy: 'Sneha Kulkarni (Director of Supply Chain)',
+    approvedAt: '2026-02-26T10:00:00Z',
     itemsJson: [
       { productId: 2, productName: 'ATB Industrial IoT Telemetry Sensor Suite', sku: 'ELC-SEN-401', quantity: 50, unitPrice: 180.0, total: 9000.0 },
       { productId: 6, productName: 'ATB Hardware Cryptographic Security Module (HSM)', sku: 'SEC-MOD-PRO', quantity: 5, unitPrice: 1900.0, total: 9500.0 },
     ],
-    notes: 'Batch inspection report signed off by QA team.',
+    notes: 'Batch inspection report signed off by QA team and stocked in Zone B.',
     createdAt: '2026-02-25T08:30:00Z',
   },
   {
@@ -725,11 +730,63 @@ export const initialPurchaseOrders: PurchaseOrder[] = [
     expectedDelivery: '2026-03-28T18:00:00Z',
     totalAmount: 22800.0,
     status: 'Ordered',
+    approvedBy: 'Ananya Iyer (Chief Financial Officer)',
+    approvedAt: '2026-03-06T14:30:00Z',
     itemsJson: [
       { productId: 4, productName: 'ATB 32-Port 100GbE Managed Core Switch', sku: 'NET-SW-100G', quantity: 8, unitPrice: 2850.0, total: 22800.0 },
     ],
-    notes: 'Air freight express shipment from Chennai logistics terminal.',
+    notes: 'Air freight express shipment from Chennai logistics terminal dispatched.',
     createdAt: '2026-03-05T11:00:00Z',
+  },
+  {
+    id: 3,
+    poNumber: 'PO-2026-0023',
+    supplierId: 1,
+    supplierName: 'Varma Precision Micro-Electronics Pvt Ltd',
+    orderDate: '2026-03-14T09:15:00Z',
+    expectedDelivery: '2026-03-31T18:00:00Z',
+    totalAmount: 18000.0,
+    status: 'Pending Review',
+    itemsJson: [
+      { productId: 2, productName: 'ATB Industrial IoT Telemetry Sensor Suite', sku: 'ELC-SEN-401', quantity: 100, unitPrice: 180.0, total: 18000.0 },
+    ],
+    notes: 'Urgent restocking: inventory below safety buffer threshold. Awaiting executive budget approval.',
+    createdAt: '2026-03-14T09:15:00Z',
+  },
+  {
+    id: 4,
+    poNumber: 'PO-2026-0024',
+    supplierId: 3,
+    supplierName: 'Hindusthan Precision Tooling Pvt Ltd',
+    orderDate: '2026-03-15T14:00:00Z',
+    expectedDelivery: '2026-04-05T18:00:00Z',
+    totalAmount: 2550.0,
+    status: 'Approved',
+    approvedBy: 'Sneha Kulkarni (Director of Supply Chain)',
+    approvedAt: '2026-03-16T11:30:00Z',
+    itemsJson: [
+      { productId: 3, productName: 'Industrial Grade Structural Alloy Billet 7075', sku: 'RAW-ALU-7075', quantity: 30, unitPrice: 85.0, total: 2550.0 },
+    ],
+    notes: 'Approved by Supply Chain Lead. Ready to transmit official purchase order to vendor.',
+    createdAt: '2026-03-15T14:00:00Z',
+  },
+  {
+    id: 5,
+    poNumber: 'PO-2026-0020',
+    supplierId: 4,
+    supplierName: 'Radiant Opto-Electronics Components Corp',
+    orderDate: '2026-02-18T16:45:00Z',
+    expectedDelivery: '2026-03-05T18:00:00Z',
+    totalAmount: 5700.0,
+    status: 'Rejected',
+    approvedBy: 'Ananya Iyer (Chief Financial Officer)',
+    approvedAt: '2026-02-19T13:00:00Z',
+    rejectionReason: 'Exceeds Q1 departmental logistics buffer; vendor must re-quote with volume discount.',
+    itemsJson: [
+      { productId: 5, productName: 'Armored High-Speed Fiber Optical Cable (50m)', sku: 'OPT-FBR-50M', quantity: 60, unitPrice: 95.0, total: 5700.0 },
+    ],
+    notes: 'Proposal rejected during weekly finance audit review.',
+    createdAt: '2026-02-18T16:45:00Z',
   },
 ];
 

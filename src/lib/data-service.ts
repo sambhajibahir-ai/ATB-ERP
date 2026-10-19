@@ -513,7 +513,7 @@ export async function createPurchaseOrder(data: {
     orderDate: new Date().toISOString(),
     expectedDelivery: new Date(Date.now() + 14 * 86400000).toISOString(),
     totalAmount,
-    status: 'Ordered',
+    status: 'Pending Review',
     itemsJson: calculatedItems,
     notes: data.notes || '',
     createdAt: new Date().toISOString(),
@@ -524,10 +524,79 @@ export async function createPurchaseOrder(data: {
     'User',
     'Created Purchase Order',
     'Purchasing',
-    `Created ${newPO.poNumber} for ${newPO.supplierName} ($${newPO.totalAmount.toLocaleString()})`
+    `Created ${newPO.poNumber} for ${newPO.supplierName} ($${newPO.totalAmount.toLocaleString()}) - Status: Pending Review`
   );
 
   return newPO;
+}
+
+export async function approvePurchaseOrder(
+  poId: number,
+  reviewer: string = 'Sneha Kulkarni (Director of Supply Chain)'
+): Promise<PurchaseOrder | null> {
+  const po = store.purchaseOrders.find((p) => p.id === poId);
+  if (!po) return null;
+
+  po.status = 'Approved';
+  po.approvedBy = reviewer;
+  po.approvedAt = new Date().toISOString();
+  po.rejectionReason = undefined;
+
+  addAuditLog(
+    reviewer,
+    'Approved Purchase Order',
+    'Purchasing',
+    `Purchase Order ${po.poNumber} for ${po.supplierName} ($${po.totalAmount.toLocaleString()}) approved and cleared for procurement`
+  );
+  return po;
+}
+
+export async function rejectPurchaseOrder(
+  poId: number,
+  reason: string,
+  reviewer: string = 'Ananya Iyer (Chief Financial Officer)'
+): Promise<PurchaseOrder | null> {
+  const po = store.purchaseOrders.find((p) => p.id === poId);
+  if (!po) return null;
+
+  po.status = 'Rejected';
+  po.approvedBy = reviewer;
+  po.approvedAt = new Date().toISOString();
+  po.rejectionReason = reason || 'Departmental procurement budget exceeded or re-negotiation required.';
+
+  addAuditLog(
+    reviewer,
+    'Rejected Purchase Order',
+    'Purchasing',
+    `Purchase Order ${po.poNumber} rejected. Reason: ${po.rejectionReason}`
+  );
+  return po;
+}
+
+export async function transmitPurchaseOrder(poId: number): Promise<PurchaseOrder | null> {
+  const po = store.purchaseOrders.find((p) => p.id === poId);
+  if (!po) return null;
+
+  po.status = 'Ordered';
+
+  addAuditLog(
+    'User',
+    'Transmitted Purchase Order',
+    'Purchasing',
+    `Purchase Order ${po.poNumber} transmitted to vendor ${po.supplierName}. Delivery tracking initiated.`
+  );
+  return po;
+}
+
+export async function updatePurchaseOrderStatus(
+  poId: number,
+  status: PurchaseOrder['status']
+): Promise<PurchaseOrder | null> {
+  const po = store.purchaseOrders.find((p) => p.id === poId);
+  if (!po) return null;
+  po.status = status;
+  addAuditLog('User', 'Updated PO Status', 'Purchasing', `${po.poNumber} status set to ${status}`);
+  return po;
 }
 
 export async function receivePurchaseOrder(poId: number): Promise<PurchaseOrder | null> {
@@ -794,7 +863,10 @@ export async function seedNeonDatabase(): Promise<{ success: boolean; message: s
         order_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         expected_delivery TIMESTAMP WITH TIME ZONE,
         total_amount NUMERIC(12, 2) NOT NULL,
-        status VARCHAR(30) DEFAULT 'Ordered',
+        status VARCHAR(30) DEFAULT 'Pending Review',
+        approved_by VARCHAR(255),
+        approved_at TIMESTAMP WITH TIME ZONE,
+        rejection_reason TEXT,
         items_json JSONB NOT NULL,
         notes TEXT,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

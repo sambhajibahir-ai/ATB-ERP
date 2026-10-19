@@ -136,7 +136,10 @@ export const purchaseOrders = pgTable('purchase_orders', {
   orderDate: timestamp('order_date').defaultNow().notNull(),
   expectedDelivery: timestamp('expected_delivery'),
   totalAmount: numeric('total_amount', { precision: 12, scale: 2 }).notNull(),
-  status: varchar('status', { length: 30 }).default('Ordered'), // Draft, Ordered, Partially Received, Received, Cancelled
+  status: varchar('status', { length: 30 }).default('Pending Review'), // Draft, Pending Review, Approved, Rejected, Ordered, Partially Received, Received, Cancelled
+  approvedBy: varchar('approved_by', { length: 255 }),
+  approvedAt: timestamp('approved_at'),
+  rejectionReason: text('rejection_reason'),
   itemsJson: jsonb('items_json').notNull(),
   notes: text('notes'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
