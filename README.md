@@ -37,7 +37,7 @@ ATB ERP is architected as a modular enterprise platform designed for scale, high
 ### 2. Sales & Client CRM (`/sales`)
 - **Sales Orders**: Lifecycle management (Draft, Confirmed, Processing, Shipped, Delivered) with automatic inventory deduction upon order creation.
 - **Customers & CRM**: Customer directory, company entities, credit limit tracking, and outstanding balances.
-- **Invoices & Commercial Billing**: Automatic invoice generation with subtotal, tax (10%), and status tracking (Paid, Partial, Unpaid).
+- **Invoices & Commercial Billing**: Automatic invoice generation with subtotal, GST (18%), and status tracking (Paid, Partial, Unpaid).
 - **Printable Commercial Invoice**: Ready-to-print branded invoices with ATB Software letterhead, payment terms, and PDF export formatting.
 
 ### 3. Inventory & Warehousing (`/inventory`)

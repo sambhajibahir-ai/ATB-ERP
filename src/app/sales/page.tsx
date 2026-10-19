@@ -207,8 +207,8 @@ export default function SalesPage() {
       name: newCustName,
       email: newCustEmail,
       company: newCustCompany,
-      phone: '+1 (555) 000-0000',
-      taxNumber: 'US-TX-AUTO',
+      phone: '+91 98765 43210',
+      taxNumber: 'GSTIN-29AABCS0000A1Z1',
       address: 'Corporate Headquarters',
       creditLimit: parseFloat(newCustCredit) || 25000,
       outstandingBalance: 0,
@@ -794,7 +794,7 @@ export default function SalesPage() {
                     <th className="py-3 px-4 font-semibold">Customer</th>
                     <th className="py-3 px-4 font-semibold">Due Date</th>
                     <th className="py-3 px-4 font-semibold text-right">Subtotal</th>
-                    <th className="py-3 px-4 font-semibold text-right">Tax (10%)</th>
+                    <th className="py-3 px-4 font-semibold text-right">GST (18%)</th>
                     <th className="py-3 px-4 font-semibold text-right">Total Amount</th>
                     <th className="py-3 px-4 font-semibold text-center">Status</th>
                     <th className="py-3 px-4 font-semibold text-right">Action</th>
@@ -1143,7 +1143,7 @@ export default function SalesPage() {
                   <span className="font-mono">₹{selectedInvoice.subtotal.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex justify-between text-slate-500">
-                  <span>Tax ({selectedInvoice.taxRate}%):</span>
+                  <span>GST ({selectedInvoice.taxRate}%):</span>
                   <span className="font-mono">₹{selectedInvoice.taxAmount.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex justify-between text-base font-extrabold text-slate-900 dark:text-white pt-2 border-t border-slate-200 dark:border-slate-700">
@@ -1293,7 +1293,7 @@ export default function SalesPage() {
             const subtotal = unitPrice * Number(quoteQuantity || 1);
             const discount = parseFloat(quoteDiscount) || 0;
             const taxable = Math.max(0, subtotal - discount);
-            const tax = taxable * 0.1;
+            const tax = taxable * 0.18;
             const grandTotal = taxable + tax;
 
             return (
@@ -1311,7 +1311,7 @@ export default function SalesPage() {
                   </div>
                 )}
                 <div className="flex justify-between text-slate-500">
-                  <span>Est. GST / Tax (10%):</span>
+                  <span>Est. GST (18%):</span>
                   <span className="font-mono font-semibold text-slate-900 dark:text-white">
                     ₹{tax.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </span>
@@ -1480,7 +1480,7 @@ export default function SalesPage() {
                   </div>
                 )}
                 <div className="flex justify-between text-slate-500">
-                  <span>Est. GST / Tax ({selectedQuote.taxRate}%):</span>
+                  <span>Est. GST ({selectedQuote.taxRate}%):</span>
                   <span className="font-mono">₹{selectedQuote.taxAmount.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex justify-between text-base font-extrabold text-indigo-600 dark:text-indigo-400 pt-2 border-t border-slate-200 dark:border-slate-700">

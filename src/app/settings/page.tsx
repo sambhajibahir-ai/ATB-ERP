@@ -67,7 +67,7 @@ export default function SettingsPage() {
             actor: 'Aarav Mehta (CEO)',
             action: 'Approved Sales Order',
             module: 'Sales & CRM',
-            details: 'Approved SO-2026-0089 for Sharma Infotech Solutions (₹33,100.00)',
+            details: 'Approved SO-2026-0089 for Sharma Infotech Solutions (₹36,580.00)',
             createdAt: '2026-03-01T10:30:00Z',
           },
           {
@@ -75,7 +75,7 @@ export default function SettingsPage() {
             actor: 'Ananya Iyer (CFO)',
             action: 'Recorded Payment',
             module: 'Finance & Accounts',
-            details: 'Reconciled wire transfer WT-882910 of ₹33,100.00 against INV-2026-0045',
+            details: 'Reconciled wire transfer WT-882910 of ₹36,580.00 against INV-2026-0045',
             createdAt: '2026-03-01T12:05:00Z',
           },
           {

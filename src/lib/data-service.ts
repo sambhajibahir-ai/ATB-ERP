@@ -289,7 +289,7 @@ export async function createQuotation(data: {
   const subtotal = calculatedItems.reduce((acc, curr) => acc + curr.total, 0);
   const discountAmount = data.discountAmount || 0;
   const taxableAmount = Math.max(0, subtotal - discountAmount);
-  const taxRate = 10;
+  const taxRate = 18;
   const taxAmount = Number((taxableAmount * (taxRate / 100)).toFixed(2));
   const totalAmount = Number((taxableAmount + taxAmount).toFixed(2));
   const validityDays = data.validityDays || 30;
@@ -404,7 +404,7 @@ export async function createSalesOrder(data: {
   });
 
   const subtotal = calculatedItems.reduce((acc, curr) => acc + curr.total, 0);
-  const taxAmount = Number((subtotal * 0.1).toFixed(2));
+  const taxAmount = Number((subtotal * 0.18).toFixed(2));
   const totalAmount = Number((subtotal + taxAmount).toFixed(2));
 
   const newOrder: SalesOrder = {
@@ -438,7 +438,7 @@ export async function createSalesOrder(data: {
     issueDate: new Date().toISOString(),
     dueDate: new Date(Date.now() + 30 * 86400000).toISOString(),
     subtotal,
-    taxRate: 10,
+    taxRate: 18,
     taxAmount,
     totalAmount,
     amountPaid: 0,
@@ -825,7 +825,7 @@ export async function seedNeonDatabase(): Promise<{ success: boolean; message: s
         issue_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         expiry_date TIMESTAMP WITH TIME ZONE NOT NULL,
         subtotal NUMERIC(12, 2) NOT NULL,
-        tax_rate NUMERIC(5, 2) DEFAULT 10.00,
+        tax_rate NUMERIC(5, 2) DEFAULT 18.00,
         tax_amount NUMERIC(12, 2) NOT NULL,
         discount_amount NUMERIC(12, 2) DEFAULT 0.00,
         total_amount NUMERIC(12, 2) NOT NULL,
@@ -882,7 +882,7 @@ export async function seedNeonDatabase(): Promise<{ success: boolean; message: s
         issue_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         due_date TIMESTAMP WITH TIME ZONE NOT NULL,
         subtotal NUMERIC(12, 2) NOT NULL,
-        tax_rate NUMERIC(5, 2) DEFAULT 10.00,
+        tax_rate NUMERIC(5, 2) DEFAULT 18.00,
         tax_amount NUMERIC(12, 2) NOT NULL,
         total_amount NUMERIC(12, 2) NOT NULL,
         amount_paid NUMERIC(12, 2) DEFAULT 0.00,

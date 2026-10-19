@@ -216,7 +216,7 @@ export function Topbar({ onMobileOpen }: TopbarProps) {
                     Payment Received
                   </div>
                   <div className="text-[11px] text-emerald-700 dark:text-emerald-300">
-                    Sharma Infotech Solutions settled ₹33,100.00 for INV-2026-0045.
+                    Sharma Infotech Solutions settled ₹36,580.00 for INV-2026-0045.
                   </div>
                 </div>
               </div>
