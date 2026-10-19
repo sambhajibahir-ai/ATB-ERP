@@ -81,7 +81,31 @@ export const products = pgTable('products', {
 });
 
 // -------------------------------------------------------------
-// 5. Sales Orders
+// 5. Quotations & Price Estimates
+// -------------------------------------------------------------
+export const quotations = pgTable('quotations', {
+  id: serial('id').primaryKey(),
+  quotationNumber: varchar('quotation_number', { length: 50 }).notNull().unique(),
+  customerId: integer('customer_id').notNull(),
+  customerName: varchar('customer_name', { length: 255 }).notNull(),
+  customerEmail: varchar('customer_email', { length: 255 }),
+  issueDate: timestamp('issue_date').defaultNow().notNull(),
+  expiryDate: timestamp('expiry_date').notNull(),
+  subtotal: numeric('subtotal', { precision: 12, scale: 2 }).notNull(),
+  taxRate: numeric('tax_rate', { precision: 5, scale: 2 }).default('10.00'),
+  taxAmount: numeric('tax_amount', { precision: 12, scale: 2 }).notNull(),
+  discountAmount: numeric('discount_amount', { precision: 12, scale: 2 }).default('0.00'),
+  totalAmount: numeric('total_amount', { precision: 12, scale: 2 }).notNull(),
+  status: varchar('status', { length: 30 }).default('Draft'), // Draft, Sent, Accepted, Declined, Converted
+  convertedSalesOrderId: integer('converted_sales_order_id'),
+  itemsJson: jsonb('items_json').notNull(), // Array of OrderItem
+  terms: text('terms'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// -------------------------------------------------------------
+// 6. Sales Orders
 // -------------------------------------------------------------
 export const salesOrders = pgTable('sales_orders', {
   id: serial('id').primaryKey(),

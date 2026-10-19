@@ -365,7 +365,7 @@ export default function SettingsPage() {
             {/* Drizzle Schema Tables Summary */}
             <div className="pt-2">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                Registered Enterprise Schema Tables (12 Entities)
+                Registered Enterprise Schema Tables (13 Entities)
               </span>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-2.5">
                 {[
@@ -373,6 +373,7 @@ export default function SettingsPage() {
                   { table: 'customers', desc: 'CRM Accounts' },
                   { table: 'suppliers', desc: 'Approved Vendors' },
                   { table: 'products', desc: 'SKUs & Inventory' },
+                  { table: 'quotations', desc: 'Price Estimates & Quotes' },
                   { table: 'sales_orders', desc: 'Client Orders' },
                   { table: 'purchase_orders', desc: 'Procurement' },
                   { table: 'invoices', desc: 'Commercial Billing' },

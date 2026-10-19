@@ -2,6 +2,7 @@ import {
   initialCustomers,
   initialSuppliers,
   initialProducts,
+  initialQuotations,
   initialSalesOrders,
   initialInvoices,
   initialPurchaseOrders,
@@ -12,6 +13,7 @@ import {
   Customer,
   Supplier,
   Product,
+  Quotation,
   SalesOrder,
   PurchaseOrder,
   Invoice,
@@ -29,6 +31,7 @@ class EnterpriseDataStore {
   customers: Customer[] = [...initialCustomers];
   suppliers: Supplier[] = [...initialSuppliers];
   products: Product[] = [...initialProducts];
+  quotations: Quotation[] = [...initialQuotations];
   salesOrders: SalesOrder[] = [...initialSalesOrders];
   invoices: Invoice[] = [...initialInvoices];
   purchaseOrders: PurchaseOrder[] = [...initialPurchaseOrders];
@@ -86,7 +89,7 @@ export async function checkDatabaseConnection(): Promise<{
       type: 'Neon Serverless PostgreSQL',
       latencyMs: latency,
       message: `Successfully connected to Neon PostgreSQL (${result.rows[0]?.db_name || 'neondb'}) in ${latency}ms.`,
-      tablesCount: 12,
+      tablesCount: 13,
     };
   } catch (error: unknown) {
     const err = error as Error;
@@ -244,6 +247,132 @@ export async function adjustProductStock(productId: number, quantityChange: numb
   );
 
   return product;
+}
+
+// -------------------------------------------------------------
+// Quotations & Price Estimates
+// -------------------------------------------------------------
+export async function getQuotations(): Promise<Quotation[]> {
+  return [...store.quotations];
+}
+
+export async function getQuotationById(id: number): Promise<Quotation | null> {
+  const quote = store.quotations.find((q) => q.id === id);
+  return quote ? { ...quote } : null;
+}
+
+export async function createQuotation(data: {
+  customerId: number;
+  customerName: string;
+  customerEmail?: string;
+  items: Array<{ productId: number; quantity: number }>;
+  validityDays?: number;
+  discountAmount?: number;
+  terms?: string;
+  notes?: string;
+}): Promise<Quotation> {
+  const calculatedItems = data.items.map((item) => {
+    const prod = store.products.find((p) => p.id === item.productId);
+    const unitPrice = prod ? prod.sellingPrice : 100;
+    const name = prod ? prod.name : 'Custom Item';
+    const sku = prod ? prod.sku : 'SKU-GEN';
+    return {
+      productId: item.productId,
+      productName: name,
+      sku,
+      quantity: item.quantity,
+      unitPrice,
+      total: unitPrice * item.quantity,
+    };
+  });
+
+  const subtotal = calculatedItems.reduce((acc, curr) => acc + curr.total, 0);
+  const discountAmount = data.discountAmount || 0;
+  const taxableAmount = Math.max(0, subtotal - discountAmount);
+  const taxRate = 10;
+  const taxAmount = Number((taxableAmount * (taxRate / 100)).toFixed(2));
+  const totalAmount = Number((taxableAmount + taxAmount).toFixed(2));
+  const validityDays = data.validityDays || 30;
+
+  const newQuote: Quotation = {
+    id: store.quotations.length + 1,
+    quotationNumber: `QT-2026-${String(store.quotations.length + 45).padStart(4, '0')}`,
+    customerId: data.customerId,
+    customerName: data.customerName,
+    customerEmail: data.customerEmail || 'billing@client.com',
+    issueDate: new Date().toISOString(),
+    expiryDate: new Date(Date.now() + validityDays * 86400000).toISOString(),
+    subtotal,
+    taxRate,
+    taxAmount,
+    discountAmount,
+    totalAmount,
+    status: 'Draft',
+    itemsJson: calculatedItems,
+    terms:
+      data.terms ||
+      `Official price proposal valid for ${validityDays} calendar days. Delivery terms: Standard freight. Standard ATB Software 3-year warranty applies.`,
+    notes: data.notes || '',
+    createdAt: new Date().toISOString(),
+  };
+
+  store.quotations.unshift(newQuote);
+
+  addAuditLog(
+    'User',
+    'Created Quotation',
+    'Sales & CRM',
+    `Created ${newQuote.quotationNumber} for ${newQuote.customerName} ($${newQuote.totalAmount.toLocaleString()})`
+  );
+
+  return newQuote;
+}
+
+export async function updateQuotationStatus(
+  id: number,
+  status: Quotation['status']
+): Promise<Quotation | null> {
+  const quote = store.quotations.find((q) => q.id === id);
+  if (!quote) return null;
+  quote.status = status;
+  addAuditLog(
+    'User',
+    'Updated Quotation Status',
+    'Sales & CRM',
+    `${quote.quotationNumber} status set to ${status}`
+  );
+  return quote;
+}
+
+export async function convertQuotationToSalesOrder(
+  quotationId: number
+): Promise<{ salesOrder: SalesOrder; quotation: Quotation } | null> {
+  const quote = store.quotations.find((q) => q.id === quotationId);
+  if (!quote) return null;
+
+  const items = quote.itemsJson.map((i) => ({
+    productId: i.productId,
+    quantity: i.quantity,
+  }));
+
+  const salesOrder = await createSalesOrder({
+    customerId: quote.customerId,
+    customerName: quote.customerName,
+    items,
+    notes: `Converted from Quotation ${quote.quotationNumber}. ${quote.notes || ''}`.trim(),
+  });
+
+  quote.status = 'Converted';
+  quote.convertedSalesOrderId = salesOrder.id;
+
+  addAuditLog(
+    'User',
+    'Converted Quotation',
+    'Sales & CRM',
+    `Converted ${quote.quotationNumber} into ${salesOrder.orderNumber} ($${salesOrder.totalAmount.toLocaleString()})`
+  );
+
+  return { salesOrder, quotation: quote };
 }
 
 // -------------------------------------------------------------
@@ -615,6 +744,27 @@ export async function seedNeonDatabase(): Promise<{ success: boolean; message: s
         warehouse_location VARCHAR(100) DEFAULT 'Main Warehouse',
         barcode VARCHAR(100),
         status VARCHAR(20) DEFAULT 'Active',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS quotations (
+        id SERIAL PRIMARY KEY,
+        quotation_number VARCHAR(50) UNIQUE NOT NULL,
+        customer_id INTEGER NOT NULL,
+        customer_name VARCHAR(255) NOT NULL,
+        customer_email VARCHAR(255),
+        issue_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        expiry_date TIMESTAMP WITH TIME ZONE NOT NULL,
+        subtotal NUMERIC(12, 2) NOT NULL,
+        tax_rate NUMERIC(5, 2) DEFAULT 10.00,
+        tax_amount NUMERIC(12, 2) NOT NULL,
+        discount_amount NUMERIC(12, 2) DEFAULT 0.00,
+        total_amount NUMERIC(12, 2) NOT NULL,
+        status VARCHAR(30) DEFAULT 'Draft',
+        converted_sales_order_id INTEGER,
+        items_json JSONB NOT NULL,
+        terms TEXT,
+        notes TEXT,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
 

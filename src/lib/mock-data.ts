@@ -54,6 +54,27 @@ export interface OrderItem {
   total: number;
 }
 
+export interface Quotation {
+  id: number;
+  quotationNumber: string;
+  customerId: number;
+  customerName: string;
+  customerEmail: string;
+  issueDate: string;
+  expiryDate: string;
+  subtotal: number;
+  taxRate: number;
+  taxAmount: number;
+  discountAmount: number;
+  totalAmount: number;
+  status: 'Draft' | 'Sent' | 'Accepted' | 'Declined' | 'Converted';
+  convertedSalesOrderId?: number;
+  itemsJson: OrderItem[];
+  terms: string;
+  notes?: string;
+  createdAt: string;
+}
+
 export interface SalesOrder {
   id: number;
   orderNumber: string;
@@ -393,6 +414,118 @@ export const initialProducts: Product[] = [
     barcode: '890123450066',
     status: 'Active',
     createdAt: '2026-02-05T10:00:00Z',
+  },
+];
+
+export const initialQuotations: Quotation[] = [
+  {
+    id: 1,
+    quotationNumber: 'QT-2026-0041',
+    customerId: 1,
+    customerName: 'Sharma Infotech Solutions Pvt Ltd',
+    customerEmail: 'aarav.mehta@sharmainfotech.in',
+    issueDate: '2026-03-10T11:00:00Z',
+    expiryDate: '2026-04-10T23:59:59Z',
+    subtotal: 22900.0,
+    taxRate: 10.0,
+    taxAmount: 2290.0,
+    discountAmount: 500.0,
+    totalAmount: 24690.0,
+    status: 'Accepted',
+    itemsJson: [
+      { productId: 1, productName: 'ATB HyperCluster Server Node X9', sku: 'ELC-SRV-900', quantity: 2, unitPrice: 6850.0, total: 13700.0 },
+      { productId: 4, productName: 'ATB 32-Port 100GbE Managed Core Switch', sku: 'NET-SW-100G', quantity: 2, unitPrice: 4600.0, total: 9200.0 },
+    ],
+    terms: 'Proposal valid for 30 calendar days from issue. Delivery within 10 business days of purchase order confirmation. Standard ATB Software 3-year warranty included.',
+    notes: 'Enterprise discount applied per strategic vendor framework agreement.',
+    createdAt: '2026-03-10T11:00:00Z',
+  },
+  {
+    id: 2,
+    quotationNumber: 'QT-2026-0042',
+    customerId: 4,
+    customerName: 'Rao Advanced BioTech Innovations Pvt Ltd',
+    customerEmail: 'deepika.rao@raobiotech.co.in',
+    issueDate: '2026-03-12T09:30:00Z',
+    expiryDate: '2026-04-12T23:59:59Z',
+    subtotal: 7350.0,
+    taxRate: 10.0,
+    taxAmount: 735.0,
+    discountAmount: 0.0,
+    totalAmount: 8085.0,
+    status: 'Sent',
+    itemsJson: [
+      { productId: 2, productName: 'ATB Industrial IoT Telemetry Sensor Suite', sku: 'ELC-SEN-401', quantity: 10, unitPrice: 395.0, total: 3950.0 },
+      { productId: 6, productName: 'ATB Hardware Cryptographic Security Module (HSM)', sku: 'SEC-MOD-PRO', quantity: 1, unitPrice: 3400.0, total: 3400.0 },
+    ],
+    terms: 'All hardware calibration certificates and ISO testing reports are enclosed with delivery. Net 30 payment terms.',
+    notes: 'Laboratory cleanroom environmental telemetry monitoring project.',
+    createdAt: '2026-03-12T09:30:00Z',
+  },
+  {
+    id: 3,
+    quotationNumber: 'QT-2026-0043',
+    customerId: 5,
+    customerName: 'Deshmukh Industrial Infrastructure Corp',
+    customerEmail: 'v.deshmukh@deshmukhindustries.in',
+    issueDate: '2026-03-14T14:15:00Z',
+    expiryDate: '2026-04-14T23:59:59Z',
+    subtotal: 4725.0,
+    taxRate: 10.0,
+    taxAmount: 472.5,
+    discountAmount: 200.0,
+    totalAmount: 4997.5,
+    status: 'Draft',
+    itemsJson: [
+      { productId: 3, productName: 'Industrial Grade Structural Alloy Billet 7075', sku: 'RAW-ALU-7075', quantity: 20, unitPrice: 165.0, total: 3300.0 },
+      { productId: 5, productName: 'Armored High-Speed Fiber Optical Cable (50m)', sku: 'OPT-FBR-50M', quantity: 15, unitPrice: 95.0, total: 1425.0 },
+    ],
+    terms: 'Direct mill shipment terms. Validity 30 days subject to raw material commodities index.',
+    notes: 'Draft estimate prepared by regional account team.',
+    createdAt: '2026-03-14T14:15:00Z',
+  },
+  {
+    id: 4,
+    quotationNumber: 'QT-2026-0040',
+    customerId: 2,
+    customerName: 'Nair Logistics & Supply Chain Ltd',
+    customerEmail: 'priya.nair@nairlogistics.co.in',
+    issueDate: '2026-02-20T10:00:00Z',
+    expiryDate: '2026-03-22T23:59:59Z',
+    subtotal: 13700.0,
+    taxRate: 10.0,
+    taxAmount: 1370.0,
+    discountAmount: 500.0,
+    totalAmount: 14570.0,
+    status: 'Converted',
+    convertedSalesOrderId: 2,
+    itemsJson: [
+      { productId: 1, productName: 'ATB HyperCluster Server Node X9', sku: 'ELC-SRV-900', quantity: 2, unitPrice: 6850.0, total: 13700.0 },
+    ],
+    terms: 'Official estimate converted to sales order SO-2026-0090.',
+    notes: 'Successfully approved by client board and converted to order.',
+    createdAt: '2026-02-20T10:00:00Z',
+  },
+  {
+    id: 5,
+    quotationNumber: 'QT-2026-0038',
+    customerId: 3,
+    customerName: 'Sengupta Precision Engineering Works',
+    customerEmail: 'amitav@sengupta-eng.in',
+    issueDate: '2026-02-10T12:00:00Z',
+    expiryDate: '2026-02-25T23:59:59Z',
+    subtotal: 13800.0,
+    taxRate: 10.0,
+    taxAmount: 1380.0,
+    discountAmount: 0.0,
+    totalAmount: 15180.0,
+    status: 'Declined',
+    itemsJson: [
+      { productId: 4, productName: 'ATB 32-Port 100GbE Managed Core Switch', sku: 'NET-SW-100G', quantity: 3, unitPrice: 4600.0, total: 13800.0 },
+    ],
+    terms: 'Proposal superseded by custom fiber optic configuration request.',
+    notes: 'Customer opted for alternative fiber optics solution.',
+    createdAt: '2026-02-10T12:00:00Z',
   },
 ];
 
