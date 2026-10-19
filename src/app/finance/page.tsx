@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Modal } from '@/components/ui/modal';
 import {
@@ -18,9 +19,17 @@ import {
 } from 'lucide-react';
 import { FinancialTransaction } from '@/lib/mock-data';
 
-export default function FinancePage() {
+function FinanceContent() {
+  const searchParams = useSearchParams();
+  const typeParam = searchParams.get('type');
   const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
   const [typeFilter, setTypeFilter] = useState('ALL');
+
+  useEffect(() => {
+    if (typeParam && ['ALL', 'Income', 'Expense'].includes(typeParam)) {
+      setTypeFilter(typeParam);
+    }
+  }, [typeParam]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -409,6 +418,14 @@ export default function FinancePage() {
         </form>
       </Modal>
     </DashboardLayout>
+  );
+}
+
+export default function FinancePage() {
+  return (
+    <Suspense fallback={null}>
+      <FinanceContent />
+    </Suspense>
   );
 }
 

@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Modal } from '@/components/ui/modal';
 import {
@@ -29,8 +30,16 @@ import {
 } from 'lucide-react';
 import { SalesOrder, Customer, Product, Invoice, Quotation } from '@/lib/mock-data';
 
-export default function SalesPage() {
+function SalesContent() {
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState<'quotations' | 'orders' | 'customers' | 'invoices'>('quotations');
+
+  useEffect(() => {
+    if (tabParam && ['quotations', 'orders', 'customers', 'invoices'].includes(tabParam)) {
+      setActiveTab(tabParam as 'quotations' | 'orders' | 'customers' | 'invoices');
+    }
+  }, [tabParam]);
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [orders, setOrders] = useState<SalesOrder[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -1552,6 +1561,14 @@ export default function SalesPage() {
         )}
       </Modal>
     </DashboardLayout>
+  );
+}
+
+export default function SalesPage() {
+  return (
+    <Suspense fallback={null}>
+      <SalesContent />
+    </Suspense>
   );
 }
 

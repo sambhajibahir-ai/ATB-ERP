@@ -149,15 +149,23 @@ export async function getDashboardMetrics() {
     count,
   }));
 
+  const quotationsCount = store.quotations.length;
+  const pendingQuotationsCount = store.quotations.filter(
+    (q) => q.status === 'Sent' || q.status === 'Draft'
+  ).length;
+
   return {
     totalRevenue,
     totalExpenses,
     netCashFlow,
     ordersCount: store.salesOrders.length,
+    quotationsCount,
+    pendingQuotationsCount,
     lowStockCount,
     activeEmployeesCount,
     unpaidInvoicesAmount,
     recentOrders: store.salesOrders.slice(0, 5),
+    recentQuotations: store.quotations.slice(0, 5),
     lowStockProducts: store.products.filter((p) => p.currentStock <= p.minStock),
     monthlyTrends,
     categoryBreakdown,

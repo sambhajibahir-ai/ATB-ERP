@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Modal } from '@/components/ui/modal';
 import {
@@ -19,11 +20,19 @@ import {
 } from 'lucide-react';
 import { Product } from '@/lib/mock-data';
 
-export default function InventoryPage() {
+function InventoryContent() {
+  const searchParams = useSearchParams();
+  const statusParam = searchParams.get('status');
   const [products, setProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
+
+  useEffect(() => {
+    if (statusParam) {
+      setStatusFilter(statusParam);
+    }
+  }, [statusParam]);
 
   // Modals
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
@@ -526,6 +535,14 @@ export default function InventoryPage() {
         )}
       </Modal>
     </DashboardLayout>
+  );
+}
+
+export default function InventoryPage() {
+  return (
+    <Suspense fallback={null}>
+      <InventoryContent />
+    </Suspense>
   );
 }
 
