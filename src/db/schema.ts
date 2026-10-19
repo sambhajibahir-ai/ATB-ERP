@@ -17,10 +17,12 @@ export const users = pgTable('users', {
   id: serial('id').primaryKey(),
   name: varchar('name', { length: 255 }).notNull(),
   email: varchar('email', { length: 255 }).notNull().unique(),
-  role: varchar('role', { length: 50 }).notNull().default('Admin'), // Admin, Finance Manager, Inventory Manager, HR Manager, Sales Rep, Operations
-  department: varchar('department', { length: 100 }).notNull().default('Executive'),
+  passwordHash: text('password_hash').notNull(),
+  role: varchar('role', { length: 50 }).notNull().default('Admin'), // Admin, Finance, Inventory, HR, Sales, Operations
+  department: varchar('department', { length: 100 }).notNull().default('Executive Administration'),
   avatar: text('avatar'),
   status: varchar('status', { length: 20 }).notNull().default('Active'),
+  lastLogin: timestamp('last_login'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 

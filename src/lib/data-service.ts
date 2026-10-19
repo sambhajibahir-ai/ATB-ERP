@@ -10,6 +10,7 @@ import {
   initialEmployees,
   initialWorkOrders,
   initialAuditLogs,
+  initialUsers,
   Customer,
   Supplier,
   Product,
@@ -21,13 +22,16 @@ import {
   Employee,
   WorkOrder,
   AuditLog,
+  User,
 } from './mock-data';
+import { hashPassword, verifyPassword } from './auth';
 import { getDb, isNeonConfigured } from '@/db';
 import * as schema from '@/db/schema';
 import { sql } from 'drizzle-orm';
 
 // In-Memory resilient store for instant responsiveness
 class EnterpriseDataStore {
+  users: User[] = [...initialUsers];
   customers: Customer[] = [...initialCustomers];
   suppliers: Supplier[] = [...initialSuppliers];
   products: Product[] = [...initialProducts];
@@ -171,6 +175,108 @@ export async function getDashboardMetrics() {
     categoryBreakdown,
     recentLogs: store.auditLogs.slice(0, 5),
   };
+}
+
+// -------------------------------------------------------------
+// Users & Credentials Authentication
+// -------------------------------------------------------------
+export async function getUsers(): Promise<Omit<User, 'passwordHash'>[]> {
+  return store.users.map(({ passwordHash, ...rest }) => rest);
+}
+
+export async function getUserById(id: number): Promise<Omit<User, 'passwordHash'> | null> {
+  const user = store.users.find((u) => u.id === id);
+  if (!user) return null;
+  const { passwordHash, ...safeUser } = user;
+  return safeUser;
+}
+
+export async function getUserByEmail(email: string): Promise<User | null> {
+  const user = store.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+  return user || null;
+}
+
+export async function createUser(data: {
+  name: string;
+  email: string;
+  password: string;
+  role: User['role'];
+  department: string;
+}): Promise<Omit<User, 'passwordHash'>> {
+  const existing = store.users.find((u) => u.email.toLowerCase() === data.email.toLowerCase());
+  if (existing) {
+    throw new Error('A user with this email address already exists');
+  }
+
+  const initials = data.name
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+
+  const newUser: User = {
+    id: store.users.length + 1,
+    name: data.name,
+    email: data.email.toLowerCase(),
+    passwordHash: hashPassword(data.password),
+    role: data.role,
+    department: data.department || 'Enterprise Operations',
+    avatar: initials,
+    status: 'Active',
+    createdAt: new Date().toISOString(),
+  };
+
+  store.users.push(newUser);
+  addAuditLog('Admin', 'Created User', 'Administration', `Created user account ${newUser.name} (${newUser.email}) with role ${newUser.role}`);
+  const { passwordHash, ...safeUser } = newUser;
+  return safeUser;
+}
+
+export async function updateUser(
+  id: number,
+  data: Partial<Pick<User, 'name' | 'role' | 'department' | 'status'>> & { password?: string }
+): Promise<Omit<User, 'passwordHash'> | null> {
+  const user = store.users.find((u) => u.id === id);
+  if (!user) return null;
+
+  if (data.name) user.name = data.name;
+  if (data.role) user.role = data.role;
+  if (data.department) user.department = data.department;
+  if (data.status) user.status = data.status;
+  if (data.password) {
+    user.passwordHash = hashPassword(data.password);
+    addAuditLog('Admin', 'Reset User Password', 'Administration', `Reset password credentials for ${user.email}`);
+  }
+
+  addAuditLog('Admin', 'Updated User', 'Administration', `Updated profile/credentials for ${user.email}`);
+  const { passwordHash, ...safeUser } = user;
+  return safeUser;
+}
+
+export async function deleteUser(id: number): Promise<boolean> {
+  const index = store.users.findIndex((u) => u.id === id);
+  if (index === -1) return false;
+  const removed = store.users.splice(index, 1)[0];
+  addAuditLog('Admin', 'Deleted User', 'Administration', `Decommissioned user profile for ${removed.email}`);
+  return true;
+}
+
+export async function authenticateUser(email: string, password: string): Promise<Omit<User, 'passwordHash'> | null> {
+  const user = store.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+  if (!user) return null;
+
+  if (user.status !== 'Active') {
+    throw new Error('User account is suspended or inactive');
+  }
+
+  const isValid = verifyPassword(password, user.passwordHash);
+  if (!isValid) return null;
+
+  user.lastLogin = new Date().toISOString();
+  addAuditLog(user.name, 'User Sign In', 'Authentication', `Successful login for ${user.email}`);
+  const { passwordHash, ...safeUser } = user;
+  return safeUser;
 }
 
 // -------------------------------------------------------------
@@ -770,10 +876,12 @@ export async function seedNeonDatabase(): Promise<{ success: boolean; message: s
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         email VARCHAR(255) UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
         role VARCHAR(50) NOT NULL DEFAULT 'Admin',
-        department VARCHAR(100) NOT NULL DEFAULT 'Executive',
+        department VARCHAR(100) NOT NULL DEFAULT 'Executive Administration',
         avatar TEXT,
         status VARCHAR(20) NOT NULL DEFAULT 'Active',
+        last_login TIMESTAMP WITH TIME ZONE,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
 
@@ -978,6 +1086,23 @@ export async function seedNeonDatabase(): Promise<{ success: boolean; message: s
           creditLimit: c.creditLimit.toString(),
           outstandingBalance: c.outstandingBalance.toString(),
           status: c.status,
+        });
+        count++;
+      }
+    }
+
+    // 4. Insert Users if empty
+    const existingUsers = await db.select().from(schema.users).limit(1);
+    if (existingUsers.length === 0) {
+      for (const u of initialUsers) {
+        await db.insert(schema.users).values({
+          name: u.name,
+          email: u.email,
+          passwordHash: u.passwordHash,
+          role: u.role,
+          department: u.department,
+          avatar: u.avatar || 'U',
+          status: u.status,
         });
         count++;
       }

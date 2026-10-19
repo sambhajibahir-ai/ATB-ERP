@@ -1,3 +1,16 @@
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  passwordHash: string;
+  role: 'Admin' | 'Finance' | 'Inventory' | 'Sales' | 'HR' | 'Operations';
+  department: string;
+  avatar?: string;
+  status: 'Active' | 'Suspended';
+  lastLogin?: string;
+  createdAt: string;
+}
+
 export interface Customer {
   id: number;
   code: string;
@@ -1040,3 +1053,67 @@ export const initialAuditLogs: AuditLog[] = [
     createdAt: '2026-03-12T16:05:00Z',
   },
 ];
+
+export const initialUsers: User[] = [
+  {
+    id: 1,
+    name: 'Aarav Mehta',
+    email: 'aarav.mehta@atbsoftware.com',
+    passwordHash: 'atb_enterprise_salt:810994b9a120f32beacf710b423445cdee1b248281a217953f5a988ecddf30bfeabd15684121214a6b8e11d699b2b1b48e63632ae09b8c6f0ba849f43a3aa9ad',
+    role: 'Admin',
+    department: 'Executive Administration',
+    avatar: 'AM',
+    status: 'Active',
+    lastLogin: '2026-03-19T08:30:00Z',
+    createdAt: '2026-01-01T00:00:00Z',
+  },
+  {
+    id: 2,
+    name: 'Ananya Iyer',
+    email: 'ananya.iyer@atbsoftware.com',
+    passwordHash: 'atb_enterprise_salt:2d98a9762b329378ab34dc667b3ca93b8ca05ed5501e6c5b21f02da6da94990304b8aa8c7acd712d0f03af27cdcbe67f53b6a34f7c8a40e6a9d2981437780803',
+    role: 'Finance',
+    department: 'Finance & Accounts',
+    avatar: 'AI',
+    status: 'Active',
+    lastLogin: '2026-03-19T09:15:00Z',
+    createdAt: '2026-01-05T00:00:00Z',
+  },
+  {
+    id: 3,
+    name: 'Sneha Kulkarni',
+    email: 'sneha.kulkarni@atbsoftware.com',
+    passwordHash: 'atb_enterprise_salt:0129fc8af983a9cecd43afb8dfb76bd342971e9bb97e756aec11fcc8c1dddfa5e4064fa76eef8de256f80bfd9be81980d11a955259342eb94b70a268efb30d0b',
+    role: 'Inventory',
+    department: 'Supply Chain & Procurement',
+    avatar: 'SK',
+    status: 'Active',
+    lastLogin: '2026-03-18T14:40:00Z',
+    createdAt: '2026-01-10T00:00:00Z',
+  },
+  {
+    id: 4,
+    name: 'Pooja Reddy',
+    email: 'pooja.reddy@atbsoftware.com',
+    passwordHash: 'atb_enterprise_salt:a59e98c8605b2a5a2148d9c0dc281630f85f34c8a92139e03c6a01444141f3378ab5a29363c53ba58633c751af2db692b818b3bacc5f1962192487bdce254ef4',
+    role: 'HR',
+    department: 'Human Resources',
+    avatar: 'PR',
+    status: 'Active',
+    lastLogin: '2026-03-17T11:20:00Z',
+    createdAt: '2026-01-15T00:00:00Z',
+  },
+  {
+    id: 5,
+    name: 'Vikram Sharma',
+    email: 'vikram.sharma@atbsoftware.com',
+    passwordHash: 'atb_enterprise_salt:bc545c452fc0e2c9cb07e332fe5161d6f1742cae1272a629f580334065c000304199ecc83b5d6fd8db148f6a9511d7963c77043a77abffe8d775d99b35e0b51f',
+    role: 'Sales',
+    department: 'Commercial Sales & CRM',
+    avatar: 'VS',
+    status: 'Active',
+    lastLogin: '2026-03-19T07:45:00Z',
+    createdAt: '2026-02-01T00:00:00Z',
+  },
+];
+

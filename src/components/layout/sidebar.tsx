@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -17,6 +17,7 @@ import {
   Shield,
   Layers,
   X,
+  LogOut,
 } from 'lucide-react';
 
 const navigationItems = [
@@ -51,9 +52,42 @@ export function Sidebar({
   onToggleCollapse,
 }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [activeRoleIndex, setActiveRoleIndex] = useState(0);
+  const [currentUser, setCurrentUser] = useState<{
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+    department: string;
+  } | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.authenticated && data?.user) {
+          setCurrentUser(data.user);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  async function handleSignOut() {
+    try {
+      setIsLoggingOut(true);
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.href = '/login';
+    } catch {
+      window.location.href = '/login';
+    }
+  }
 
   const currentRole = ROLES[activeRoleIndex];
+  const displayName = currentUser?.name || currentRole.name;
+  const displayRole = currentUser?.role || currentRole.role;
+  const displayDept = currentUser?.department || currentRole.title;
 
   return (
     <>
@@ -190,46 +224,68 @@ export function Sidebar({
         {/* Role Switcher & User Profile */}
         <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40">
           {!collapsed || mobileOpen ? (
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold uppercase tracking-wider px-1">
-                <span>Current Session</span>
-                <button
-                  onClick={() =>
-                    setActiveRoleIndex((prev) => (prev + 1) % ROLES.length)
-                  }
-                  className="text-blue-600 dark:text-blue-400 hover:underline capitalize"
-                  title="Simulate other company roles"
-                >
-                  Switch Role
-                </button>
+                <span>Active Session</span>
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Live
+                </span>
               </div>
 
               <div className="flex items-center gap-2.5 p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-slate-700 to-slate-900 dark:from-slate-600 dark:to-slate-800 text-white flex items-center justify-center font-bold text-xs shrink-0">
-                  {currentRole.name
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+                  {displayName
                     .split(' ')
                     .map((n) => n[0])
-                    .join('')}
+                    .join('')
+                    .slice(0, 2)
+                    .toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-semibold text-slate-900 dark:text-white truncate">
-                    {currentRole.name}
+                    {displayName}
                   </div>
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
-                    {currentRole.title}
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate flex items-center gap-1">
+                    <span>{displayRole}</span>
+                    <span>•</span>
+                    <span className="truncate">{displayDept}</span>
                   </div>
                 </div>
                 <Shield className="w-3.5 h-3.5 text-blue-500 shrink-0" />
               </div>
+
+              {/* Sign Out Button */}
+              <button
+                onClick={handleSignOut}
+                disabled={isLoggingOut}
+                className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-rose-200/60 dark:border-rose-900/40 transition-colors"
+                title="Sign out of ATB ERP"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>{isLoggingOut ? 'Signing out...' : 'Sign Out'}</span>
+              </button>
             </div>
           ) : (
-            <button
-              onClick={onToggleCollapse}
-              className="w-full flex items-center justify-center p-2 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500"
-              title="Expand"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
+            <div className="flex flex-col items-center gap-2">
+              <button
+                onClick={handleSignOut}
+                disabled={isLoggingOut}
+                className="p-2 rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                title="Sign Out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+              {onToggleCollapse && (
+                <button
+                  onClick={onToggleCollapse}
+                  className="w-full flex items-center justify-center p-2 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500"
+                  title="Expand"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              )}
+            </div>
           )}
         </div>
       </aside>
