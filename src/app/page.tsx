@@ -69,78 +69,84 @@ export default async function DashboardPage() {
       </div>
 
       {/* KPI Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
-        <StatCard
-          title="Total Revenue"
-          value={`₹${metrics.totalRevenue.toLocaleString('en-IN', { minimumFractionDigits: 0 })}`}
-          change="+14.2%"
-          trend="up"
-          subtitle="vs last month"
-          icon={IndianRupee}
-          iconColor="text-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-900"
-          href="/finance?type=Income"
-        />
+      <div className="space-y-3.5 sm:space-y-4">
+        {/* Tier 1: Commercial & Financial Pipeline (4 Cards) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+          <StatCard
+            title="Total Revenue"
+            value={`₹${metrics.totalRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            change="+14.2%"
+            trend="up"
+            subtitle="vs last month"
+            icon={IndianRupee}
+            iconColor="text-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-900"
+            href="/finance?type=Income"
+          />
 
-        <StatCard
-          title="Net Cash Flow"
-          value={`₹${metrics.netCashFlow.toLocaleString('en-IN', { minimumFractionDigits: 0 })}`}
-          change="+18.4%"
-          trend="up"
-          subtitle="operating margin"
-          icon={TrendingUp}
-          iconColor="text-blue-500 bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-900"
-          href="/finance"
-        />
+          <StatCard
+            title="Net Cash Flow"
+            value={`₹${metrics.netCashFlow.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            change="+18.4%"
+            trend="up"
+            subtitle="operating margin"
+            icon={TrendingUp}
+            iconColor="text-blue-500 bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-900"
+            href="/finance"
+          />
 
-        <StatCard
-          title="Quotations"
-          value={metrics.quotationsCount}
-          change={`${metrics.pendingQuotationsCount} open`}
-          trend="neutral"
-          subtitle="proposals sent"
-          icon={FileSpreadsheet}
-          iconColor="text-cyan-500 bg-cyan-50 dark:bg-cyan-950/40 border-cyan-200 dark:border-cyan-900"
-          href="/sales?tab=quotations"
-        />
+          <StatCard
+            title="Quotations"
+            value={metrics.quotationsCount}
+            change={`${metrics.pendingQuotationsCount} open`}
+            trend="neutral"
+            subtitle="proposals sent"
+            icon={FileSpreadsheet}
+            iconColor="text-cyan-500 bg-cyan-50 dark:bg-cyan-950/40 border-cyan-200 dark:border-cyan-900"
+            href="/sales?tab=quotations"
+          />
 
-        <StatCard
-          title="Sales Orders"
-          value={metrics.ordersCount}
-          subtitle="active in pipeline"
-          icon={ShoppingCart}
-          iconColor="text-indigo-500 bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-900"
-          href="/sales?tab=orders"
-        />
+          <StatCard
+            title="Sales Orders"
+            value={metrics.ordersCount}
+            subtitle="active in pipeline"
+            icon={ShoppingCart}
+            iconColor="text-indigo-500 bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-900"
+            href="/sales?tab=orders"
+          />
+        </div>
 
-        <StatCard
-          title="Low Stock SKUs"
-          value={metrics.lowStockCount}
-          badge={metrics.lowStockCount > 0 ? 'Action Req' : undefined}
-          subtitle="below threshold"
-          icon={AlertTriangle}
-          iconColor="text-amber-500 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900"
-          href="/inventory?status=Low+Stock"
-        />
+        {/* Tier 2: Working Capital, Inventory & Workforce (3 Cards) */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
+          <StatCard
+            title="Receivables"
+            value={`₹${metrics.unpaidInvoicesAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            change="Net 30"
+            trend="neutral"
+            subtitle="pending invoices"
+            icon={CreditCard}
+            iconColor="text-rose-500 bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900"
+            href="/sales?tab=invoices"
+          />
 
-        <StatCard
-          title="Receivables"
-          value={`₹${metrics.unpaidInvoicesAmount.toLocaleString('en-IN')}`}
-          change="Net 30"
-          trend="neutral"
-          subtitle="pending invoices"
-          icon={CreditCard}
-          iconColor="text-rose-500 bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900"
-          href="/sales?tab=invoices"
-        />
+          <StatCard
+            title="Low Stock SKUs"
+            value={metrics.lowStockCount}
+            badge={metrics.lowStockCount > 0 ? 'Action Req' : undefined}
+            subtitle="below safety threshold"
+            icon={AlertTriangle}
+            iconColor="text-amber-500 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900"
+            href="/inventory?status=Low+Stock"
+          />
 
-        <StatCard
-          title="Headcount"
-          value={metrics.activeEmployeesCount}
-          subtitle="across 5 depts"
-          icon={Users}
-          iconColor="text-violet-500 bg-violet-50 dark:bg-violet-950/40 border-violet-200 dark:border-violet-900"
-          href="/hr"
-        />
+          <StatCard
+            title="Headcount"
+            value={metrics.activeEmployeesCount}
+            subtitle="across 5 departments"
+            icon={Users}
+            iconColor="text-violet-500 bg-violet-50 dark:bg-violet-950/40 border-violet-200 dark:border-violet-900"
+            href="/hr"
+          />
+        </div>
       </div>
 
       {/* Analytics Charts Section */}
@@ -193,11 +199,11 @@ export default async function DashboardPage() {
                       <td className="py-3 font-mono font-semibold text-blue-600 dark:text-blue-400">
                         {order.orderNumber}
                       </td>
-                      <td className="py-3 font-medium text-slate-800 dark:text-slate-200">
+                      <td className="py-3 font-medium text-slate-800 dark:text-slate-200 max-w-[110px] truncate" title={order.customerName}>
                         {order.customerName}
                       </td>
                       <td className="py-3 text-right font-bold text-slate-900 dark:text-white">
-                        ₹{order.totalAmount.toLocaleString('en-IN')}
+                        ₹{order.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       <td className="py-3 text-right">
                         <span
@@ -257,11 +263,11 @@ export default async function DashboardPage() {
                       <td className="py-3 font-mono font-semibold text-cyan-600 dark:text-cyan-400">
                         {quote.quotationNumber}
                       </td>
-                      <td className="py-3 font-medium text-slate-800 dark:text-slate-200">
+                      <td className="py-3 font-medium text-slate-800 dark:text-slate-200 max-w-[110px] truncate" title={quote.customerName}>
                         {quote.customerName}
                       </td>
                       <td className="py-3 text-right font-bold text-slate-900 dark:text-white">
-                        ₹{quote.totalAmount.toLocaleString('en-IN')}
+                        ₹{quote.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       <td className="py-3 text-right">
                         <span

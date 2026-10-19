@@ -96,10 +96,10 @@ export function CategoryPie({ data }: CategoryPieProps) {
         </div>
 
         {/* Legend */}
-        <div className="flex-1 w-full space-y-2">
+        <div className="flex-1 w-full space-y-2.5 min-w-0">
           {segments.map((seg, idx) => (
-            <div key={idx} className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2 truncate">
+            <div key={idx} className="flex items-center justify-between text-xs gap-3">
+              <div className="flex items-center gap-2 min-w-0 flex-1 pr-2">
                 <span
                   className="w-2.5 h-2.5 rounded-full shrink-0"
                   style={{ backgroundColor: seg.color }}
@@ -108,11 +108,11 @@ export function CategoryPie({ data }: CategoryPieProps) {
                   {seg.name}
                 </span>
               </div>
-              <div className="flex items-center gap-3 shrink-0">
+              <div className="flex items-center gap-2.5 shrink-0 ml-auto">
                 <span className="font-semibold text-slate-900 dark:text-white">
                   {seg.count}
                 </span>
-                <span className="text-slate-400 w-8 text-right font-mono">
+                <span className="text-slate-400 w-8 text-right font-mono text-[11px]">
                   {seg.percent}%
                 </span>
               </div>
