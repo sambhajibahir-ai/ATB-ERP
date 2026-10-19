@@ -43,8 +43,8 @@ export default function SettingsPage() {
   // Company Profile State
   const [companyName, setCompanyName] = useState('ATB Software');
   const [taxId, setTaxId] = useState('ATB-REG-2026-99');
-  const [currency, setCurrency] = useState('USD ($)');
-  const [fiscalYear, setFiscalYear] = useState('January 1 - December 31');
+  const [currency, setCurrency] = useState('INR (₹)');
+  const [fiscalYear, setFiscalYear] = useState('April 1 - March 31');
   const [companySaved, setCompanySaved] = useState(false);
 
   // Audit Logs
@@ -67,7 +67,7 @@ export default function SettingsPage() {
             actor: 'Aarav Mehta (CEO)',
             action: 'Approved Sales Order',
             module: 'Sales & CRM',
-            details: 'Approved SO-2026-0089 for Sharma Infotech Solutions ($33,100.00)',
+            details: 'Approved SO-2026-0089 for Sharma Infotech Solutions (₹33,100.00)',
             createdAt: '2026-03-01T10:30:00Z',
           },
           {
@@ -75,7 +75,7 @@ export default function SettingsPage() {
             actor: 'Ananya Iyer (CFO)',
             action: 'Recorded Payment',
             module: 'Finance & Accounts',
-            details: 'Reconciled wire transfer WT-882910 of $33,100.00 against INV-2026-0045',
+            details: 'Reconciled wire transfer WT-882910 of ₹33,100.00 against INV-2026-0045',
             createdAt: '2026-03-01T12:05:00Z',
           },
           {
@@ -437,10 +437,10 @@ export default function SettingsPage() {
                   onChange={(e) => setCurrency(e.target.value)}
                   className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white"
                 >
+                  <option value="INR (₹)">INR - Indian Rupee (₹)</option>
                   <option value="USD ($)">USD - US Dollar ($)</option>
                   <option value="EUR (€)">EUR - Euro (€)</option>
                   <option value="GBP (£)">GBP - British Pound (£)</option>
-                  <option value="INR (₹)">INR - Indian Rupee (₹)</option>
                 </select>
               </div>
             </div>

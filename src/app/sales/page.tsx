@@ -16,7 +16,7 @@ import {
   Building2,
   Mail,
   Phone,
-  DollarSign,
+  IndianRupee,
   UserPlus,
   FileSpreadsheet,
   ArrowRight,
@@ -159,7 +159,7 @@ export default function SalesPage() {
       if (res.ok) {
         const data = await res.json();
         setConvertSuccessMsg(
-          `Success! Quotation was converted into Sales Order ${data.salesOrder.orderNumber} ($${data.salesOrder.totalAmount.toLocaleString()}).`
+          `Success! Quotation was converted into Sales Order ${data.salesOrder.orderNumber} (₹${data.salesOrder.totalAmount.toLocaleString('en-IN')}).`
         );
         loadData();
         if (selectedQuote && selectedQuote.id === quotationId) {
@@ -408,11 +408,11 @@ export default function SalesPage() {
               <div>
                 <span className="text-[10px] font-bold uppercase text-slate-400">Pipeline Est. Value</span>
                 <div className="text-xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">
-                  ${totalQuoteValue.toLocaleString(undefined, { minimumFractionDigits: 0 })}
+                  ₹{totalQuoteValue.toLocaleString('en-IN', { minimumFractionDigits: 0 })}
                 </div>
               </div>
               <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600">
-                <DollarSign className="w-5 h-5" />
+                <IndianRupee className="w-5 h-5" />
               </div>
             </div>
 
@@ -530,7 +530,7 @@ export default function SalesPage() {
                           {quote.itemsJson.map((i) => `${i.quantity}x ${i.productName}`).join(', ')}
                         </td>
                         <td className="py-3.5 px-4 text-right font-bold text-slate-900 dark:text-white font-mono">
-                          ${quote.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          ₹{quote.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                         </td>
                         <td className="py-3.5 px-4 text-center">
                           <span
@@ -688,7 +688,7 @@ export default function SalesPage() {
                         {order.itemsJson.map((i) => `${i.quantity}x ${i.productName}`).join(', ')}
                       </td>
                       <td className="py-3.5 px-4 text-right font-bold text-slate-900 dark:text-white">
-                        ${order.totalAmount.toLocaleString()}
+                        ₹{order.totalAmount.toLocaleString('en-IN')}
                       </td>
                       <td className="py-3.5 px-4 text-center">
                         <span
@@ -767,13 +767,13 @@ export default function SalesPage() {
                 <div>
                   <span className="text-slate-400 text-[10px] uppercase font-semibold">Credit Limit</span>
                   <div className="font-bold text-slate-900 dark:text-white">
-                    ${cust.creditLimit.toLocaleString()}
+                    ₹{cust.creditLimit.toLocaleString('en-IN')}
                   </div>
                 </div>
                 <div className="text-right">
                   <span className="text-slate-400 text-[10px] uppercase font-semibold">Balance</span>
                   <div className={`font-bold ${cust.outstandingBalance > 0 ? 'text-amber-600' : 'text-slate-900 dark:text-white'}`}>
-                    ${cust.outstandingBalance.toLocaleString()}
+                    ₹{cust.outstandingBalance.toLocaleString('en-IN')}
                   </div>
                 </div>
               </div>
@@ -813,13 +813,13 @@ export default function SalesPage() {
                         {new Date(inv.dueDate).toLocaleDateString()}
                       </td>
                       <td className="py-3.5 px-4 text-right text-slate-700 dark:text-slate-300">
-                        ${inv.subtotal.toLocaleString()}
+                        ₹{inv.subtotal.toLocaleString('en-IN')}
                       </td>
                       <td className="py-3.5 px-4 text-right text-slate-500">
-                        ${inv.taxAmount.toLocaleString()}
+                        ₹{inv.taxAmount.toLocaleString('en-IN')}
                       </td>
                       <td className="py-3.5 px-4 text-right font-bold text-slate-900 dark:text-white">
-                        ${inv.totalAmount.toLocaleString()}
+                        ₹{inv.totalAmount.toLocaleString('en-IN')}
                       </td>
                       <td className="py-3.5 px-4 text-center">
                         <span
@@ -899,7 +899,7 @@ export default function SalesPage() {
               >
                 {products.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name} - ${p.sellingPrice} (Stock: {p.currentStock})
+                    {p.name} - ₹{p.sellingPrice} (Stock: {p.currentStock})
                   </option>
                 ))}
               </select>
@@ -1000,7 +1000,7 @@ export default function SalesPage() {
           </div>
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Credit Limit (USD)
+              Credit Limit (INR - ₹)
             </label>
             <input
               type="number"
@@ -1124,10 +1124,10 @@ export default function SalesPage() {
                       <td className="py-3 px-3 font-mono text-slate-500">{item.sku}</td>
                       <td className="py-3 px-3 text-center">{item.quantity}</td>
                       <td className="py-3 px-3 text-right font-mono">
-                        ${item.unitPrice.toLocaleString()}
+                        ₹{item.unitPrice.toLocaleString('en-IN')}
                       </td>
                       <td className="py-3 px-3 text-right font-mono font-bold text-slate-900 dark:text-white">
-                        ${item.total.toLocaleString()}
+                        ₹{item.total.toLocaleString('en-IN')}
                       </td>
                     </tr>
                   ))}
@@ -1140,15 +1140,15 @@ export default function SalesPage() {
               <div className="w-full sm:w-64 space-y-1.5 text-xs">
                 <div className="flex justify-between text-slate-500">
                   <span>Subtotal:</span>
-                  <span className="font-mono">${selectedInvoice.subtotal.toLocaleString()}</span>
+                  <span className="font-mono">₹{selectedInvoice.subtotal.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex justify-between text-slate-500">
                   <span>Tax ({selectedInvoice.taxRate}%):</span>
-                  <span className="font-mono">${selectedInvoice.taxAmount.toLocaleString()}</span>
+                  <span className="font-mono">₹{selectedInvoice.taxAmount.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex justify-between text-base font-extrabold text-slate-900 dark:text-white pt-2 border-t border-slate-200 dark:border-slate-700">
                   <span>Grand Total:</span>
-                  <span className="font-mono">${selectedInvoice.totalAmount.toLocaleString()}</span>
+                  <span className="font-mono">₹{selectedInvoice.totalAmount.toLocaleString('en-IN')}</span>
                 </div>
               </div>
             </div>
@@ -1209,7 +1209,7 @@ export default function SalesPage() {
               >
                 {products.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name} - ${p.sellingPrice.toLocaleString()} (Stock: {p.currentStock})
+                    {p.name} - ₹{p.sellingPrice.toLocaleString('en-IN')} (Stock: {p.currentStock})
                   </option>
                 ))}
               </select>
@@ -1246,7 +1246,7 @@ export default function SalesPage() {
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Promotional / Partner Discount ($)
+                Promotional / Partner Discount (INR - ₹)
               </label>
               <input
                 type="number"
@@ -1301,25 +1301,25 @@ export default function SalesPage() {
                 <div className="flex justify-between text-slate-500">
                   <span>Calculated Subtotal:</span>
                   <span className="font-mono font-semibold text-slate-900 dark:text-white">
-                    ${subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    ₹{subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
                 {discount > 0 && (
                   <div className="flex justify-between text-emerald-600 font-semibold">
                     <span>Discount Applied:</span>
-                    <span className="font-mono">-${discount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    <span className="font-mono">-₹{discount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-slate-500">
                   <span>Est. GST / Tax (10%):</span>
                   <span className="font-mono font-semibold text-slate-900 dark:text-white">
-                    ${tax.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    ₹{tax.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm font-bold text-indigo-600 dark:text-indigo-400 pt-1 border-t border-slate-200 dark:border-slate-700">
                   <span>Quotation Grand Total:</span>
                   <span className="font-mono">
-                    ${grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    ₹{grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>
@@ -1455,10 +1455,10 @@ export default function SalesPage() {
                       <td className="py-3 px-3 font-mono text-slate-500">{item.sku}</td>
                       <td className="py-3 px-3 text-center">{item.quantity}</td>
                       <td className="py-3 px-3 text-right font-mono">
-                        ${item.unitPrice.toLocaleString()}
+                        ₹{item.unitPrice.toLocaleString('en-IN')}
                       </td>
                       <td className="py-3 px-3 text-right font-mono font-bold text-slate-900 dark:text-white">
-                        ${item.total.toLocaleString()}
+                        ₹{item.total.toLocaleString('en-IN')}
                       </td>
                     </tr>
                   ))}
@@ -1471,21 +1471,21 @@ export default function SalesPage() {
               <div className="w-full sm:w-64 space-y-1.5 text-xs">
                 <div className="flex justify-between text-slate-500">
                   <span>Subtotal:</span>
-                  <span className="font-mono">${selectedQuote.subtotal.toLocaleString()}</span>
+                  <span className="font-mono">₹{selectedQuote.subtotal.toLocaleString('en-IN')}</span>
                 </div>
                 {selectedQuote.discountAmount > 0 && (
                   <div className="flex justify-between text-emerald-600 font-semibold">
                     <span>Discount:</span>
-                    <span className="font-mono">-${selectedQuote.discountAmount.toLocaleString()}</span>
+                    <span className="font-mono">-₹{selectedQuote.discountAmount.toLocaleString('en-IN')}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-slate-500">
                   <span>Est. GST / Tax ({selectedQuote.taxRate}%):</span>
-                  <span className="font-mono">${selectedQuote.taxAmount.toLocaleString()}</span>
+                  <span className="font-mono">₹{selectedQuote.taxAmount.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex justify-between text-base font-extrabold text-indigo-600 dark:text-indigo-400 pt-2 border-t border-slate-200 dark:border-slate-700">
                   <span>Estimated Total:</span>
-                  <span className="font-mono">${selectedQuote.totalAmount.toLocaleString()}</span>
+                  <span className="font-mono">₹{selectedQuote.totalAmount.toLocaleString('en-IN')}</span>
                 </div>
               </div>
             </div>

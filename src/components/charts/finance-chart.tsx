@@ -74,7 +74,7 @@ export function FinanceChart({ data }: FinanceChartProps) {
                   fill="currentColor"
                   className="text-[10px] text-slate-400 select-none"
                 >
-                  ${Math.round((pct * maxVal) / 1000)}k
+                  ₹{Math.round((pct * maxVal) / 1000)}k
                 </text>
               </g>
             );
@@ -187,15 +187,15 @@ export function FinanceChart({ data }: FinanceChartProps) {
             <div className="grid grid-cols-2 gap-x-4 gap-y-1">
               <span className="text-slate-500">Revenue:</span>
               <span className="font-semibold text-emerald-600 dark:text-emerald-400 text-right">
-                ${data[hoveredIdx].revenue.toLocaleString()}
+                ₹{data[hoveredIdx].revenue.toLocaleString('en-IN')}
               </span>
               <span className="text-slate-500">Expenses:</span>
               <span className="font-semibold text-indigo-600 dark:text-indigo-400 text-right">
-                ${data[hoveredIdx].expenses.toLocaleString()}
+                ₹{data[hoveredIdx].expenses.toLocaleString('en-IN')}
               </span>
               <span className="text-slate-500">Net Profit:</span>
               <span className="font-bold text-amber-600 dark:text-amber-400 text-right">
-                ${data[hoveredIdx].profit.toLocaleString()}
+                ₹{data[hoveredIdx].profit.toLocaleString('en-IN')}
               </span>
             </div>
           </div>

@@ -6,7 +6,7 @@ import { FinanceChart } from '@/components/charts/finance-chart';
 import { CategoryPie } from '@/components/charts/category-pie';
 import { getDashboardMetrics } from '@/lib/data-service';
 import {
-  DollarSign,
+  IndianRupee,
   TrendingUp,
   ShoppingCart,
   AlertTriangle,
@@ -64,17 +64,17 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <StatCard
           title="Total Revenue"
-          value={`$${metrics.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 0 })}`}
+          value={`₹${metrics.totalRevenue.toLocaleString('en-IN', { minimumFractionDigits: 0 })}`}
           change="+14.2%"
           trend="up"
           subtitle="vs last month"
-          icon={DollarSign}
+          icon={IndianRupee}
           iconColor="text-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-900"
         />
 
         <StatCard
           title="Net Cash Flow"
-          value={`$${metrics.netCashFlow.toLocaleString(undefined, { minimumFractionDigits: 0 })}`}
+          value={`₹${metrics.netCashFlow.toLocaleString('en-IN', { minimumFractionDigits: 0 })}`}
           change="+18.4%"
           trend="up"
           subtitle="operating margin"
@@ -101,7 +101,7 @@ export default async function DashboardPage() {
 
         <StatCard
           title="Receivables"
-          value={`$${metrics.unpaidInvoicesAmount.toLocaleString()}`}
+          value={`₹${metrics.unpaidInvoicesAmount.toLocaleString('en-IN')}`}
           change="Net 30"
           trend="neutral"
           subtitle="pending invoices"
@@ -171,7 +171,7 @@ export default async function DashboardPage() {
                       {order.customerName}
                     </td>
                     <td className="py-3 text-right font-bold text-slate-900 dark:text-white">
-                      ${order.totalAmount.toLocaleString()}
+                      ₹{order.totalAmount.toLocaleString('en-IN')}
                     </td>
                     <td className="py-3 text-right">
                       <span

@@ -14,7 +14,7 @@ import {
   Layers,
   MapPin,
   CheckCircle2,
-  DollarSign,
+  IndianRupee,
   TrendingUp,
 } from 'lucide-react';
 import { Product } from '@/lib/mock-data';
@@ -158,11 +158,11 @@ export default function InventoryPage() {
           <div>
             <span className="text-[10px] font-bold uppercase text-slate-400">Total Stock Valuation</span>
             <div className="text-xl font-bold text-slate-900 dark:text-white mt-1">
-              ${totalValuation.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              ₹{totalValuation.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </div>
           </div>
           <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-600">
-            <DollarSign className="w-5 h-5" />
+            <IndianRupee className="w-5 h-5" />
           </div>
         </div>
 
@@ -276,10 +276,10 @@ export default function InventoryPage() {
                       </div>
                     </td>
                     <td className="py-3.5 px-4 text-right font-mono text-slate-600 dark:text-slate-300">
-                      ${p.costPrice.toFixed(2)}
+                      ₹{p.costPrice.toFixed(2)}
                     </td>
                     <td className="py-3.5 px-4 text-right font-mono font-bold text-slate-900 dark:text-white">
-                      <div>${p.sellingPrice.toFixed(2)}</div>
+                      <div>₹{p.sellingPrice.toFixed(2)}</div>
                       <div className="text-[10px] text-emerald-600 font-semibold">{margin}% margin</div>
                     </td>
                     <td className="py-3.5 px-4 text-center">
@@ -367,7 +367,7 @@ export default function InventoryPage() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Cost ($)
+                Cost (INR - ₹)
               </label>
               <input
                 type="number"
@@ -380,7 +380,7 @@ export default function InventoryPage() {
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Selling Price ($)
+                Selling Price (INR - ₹)
               </label>
               <input
                 type="number"

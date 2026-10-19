@@ -71,7 +71,7 @@ ATB ERP is architected as a modular enterprise platform designed for scale, high
   - Live status indicator and ping test (measures database roundtrip latency in ms).
   - Connection validator for custom Neon connection strings.
   - **1-Click Seed Neon Database**: Pushes all 12 Postgres tables (`users`, `customers`, `products`, `sales_orders`, `purchase_orders`, `invoices`, `financial_transactions`, `employees`, `work_orders`, `audit_logs`) and populates them with sample enterprise data.
-- **Company Profile**: Legal entity name (**ATB Software**), Registration ID (`ATB-REG-2026-99`), accounting currency (`USD`, `EUR`, `GBP`, `INR`), and fiscal year.
+- **Company Profile**: Legal entity name (**ATB Software**), Registration ID (`ATB-REG-2026-99`), base accounting currency (`INR (₹)`, with options for `USD`, `EUR`, `GBP`), and fiscal year (`April 1 - March 31`).
 - **RBAC Permissions Matrix**: Visual breakdown of module permissions.
 - **System Audit Trail**: Complete activity journal with actor, action, and timestamp.
 

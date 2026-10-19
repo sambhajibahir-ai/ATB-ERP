@@ -8,7 +8,7 @@ import {
   UserPlus,
   Search,
   Filter,
-  DollarSign,
+  IndianRupee,
   Building,
   Mail,
   Phone,
@@ -131,11 +131,11 @@ export default function HRPage() {
           <div>
             <span className="text-[10px] font-bold uppercase text-slate-400">Monthly Payroll Commitment</span>
             <div className="text-xl font-bold text-slate-900 dark:text-white mt-1">
-              ${monthlyPayroll.toLocaleString(undefined, { maximumFractionDigits: 0 })}/mo
+              ₹{monthlyPayroll.toLocaleString('en-IN', { maximumFractionDigits: 0 })}/mo
             </div>
           </div>
           <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-600">
-            <DollarSign className="w-5 h-5" />
+            <IndianRupee className="w-5 h-5" />
           </div>
         </div>
 
@@ -143,7 +143,7 @@ export default function HRPage() {
           <div>
             <span className="text-[10px] font-bold uppercase text-slate-400">Annual Run-rate</span>
             <div className="text-xl font-bold text-slate-900 dark:text-white mt-1">
-              ${totalAnnualPayroll.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              ₹{totalAnnualPayroll.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
             </div>
           </div>
           <div className="p-2.5 rounded-xl bg-violet-50 dark:bg-violet-950 text-violet-600">
@@ -226,7 +226,7 @@ export default function HRPage() {
               <div>
                 <span className="text-[10px] uppercase font-semibold text-slate-400">Annual Base</span>
                 <div className="font-bold text-slate-900 dark:text-white font-mono">
-                  ${emp.salary.toLocaleString()}/yr
+                  ₹{emp.salary.toLocaleString('en-IN')}/yr
                 </div>
               </div>
               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
@@ -323,7 +323,7 @@ export default function HRPage() {
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Annual Salary (USD)
+              Annual Salary (INR - ₹)
             </label>
             <input
               type="number"

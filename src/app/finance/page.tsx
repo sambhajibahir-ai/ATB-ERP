@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Modal } from '@/components/ui/modal';
 import {
-  DollarSign,
+  IndianRupee,
   TrendingUp,
   TrendingDown,
   Plus,
@@ -151,7 +151,7 @@ export default function FinancePage() {
           <div>
             <span className="text-[10px] font-bold uppercase text-slate-400">Total Income</span>
             <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
-              ${totalIncome.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              ₹{totalIncome.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </div>
           </div>
           <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-600">
@@ -163,7 +163,7 @@ export default function FinancePage() {
           <div>
             <span className="text-[10px] font-bold uppercase text-slate-400">Operational Expenses</span>
             <div className="text-xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">
-              ${totalExpense.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              ₹{totalExpense.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </div>
           </div>
           <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600">
@@ -175,11 +175,11 @@ export default function FinancePage() {
           <div>
             <span className="text-[10px] font-bold uppercase text-slate-400">Net Operating Profit</span>
             <div className="text-xl font-bold text-slate-900 dark:text-white mt-1">
-              ${netProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              ₹{netProfit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </div>
           </div>
           <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950 text-blue-600">
-            <DollarSign className="w-5 h-5" />
+            <IndianRupee className="w-5 h-5" />
           </div>
         </div>
 
@@ -275,7 +275,7 @@ export default function FinancePage() {
                         : 'text-indigo-600 dark:text-indigo-400'
                     }`}
                   >
-                    {tx.type === 'Income' ? '+' : '-'}${tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    {tx.type === 'Income' ? '+' : '-'}₹{tx.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </td>
                   <td className="py-3.5 px-4 text-center">
                     <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600">
@@ -336,7 +336,7 @@ export default function FinancePage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Amount (USD)
+                Amount (INR - ₹)
               </label>
               <input
                 type="number"

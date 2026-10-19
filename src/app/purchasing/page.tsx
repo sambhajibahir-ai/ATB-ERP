@@ -10,7 +10,7 @@ import {
   CheckCircle,
   Building,
   Mail,
-  DollarSign,
+  IndianRupee,
   PackageCheck,
   Star,
   Clock,
@@ -277,11 +277,11 @@ export default function PurchasingPage() {
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-500">Authorized Procurement Spend</span>
             <span className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400">
-              <DollarSign className="w-4 h-4" />
+              <IndianRupee className="w-4 h-4" />
             </span>
           </div>
           <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">
-            ${totalSpend.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            ₹{totalSpend.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
           <p className="text-[11px] text-slate-500 mt-1">Total active & completed purchase contracts</p>
         </div>
@@ -298,7 +298,7 @@ export default function PurchasingPage() {
             {pendingReviewOrders.length} Orders
           </p>
           <p className="text-[11px] text-amber-700/80 dark:text-amber-400 mt-1">
-            ${pendingReviewAmount.toLocaleString()} awaiting manager sign-off
+            ₹{pendingReviewAmount.toLocaleString('en-IN')} awaiting manager sign-off
           </p>
         </div>
 
@@ -453,7 +453,7 @@ export default function PurchasingPage() {
                           {po.itemsJson.map((i) => `${i.quantity}x ${i.productName}`).join(', ')}
                         </td>
                         <td className="py-3.5 px-4 text-right font-bold text-slate-900 dark:text-white">
-                          ${po.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          ₹{po.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                         <td className="py-3.5 px-4 text-center">
                           <span
@@ -688,7 +688,7 @@ export default function PurchasingPage() {
               >
                 {products.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name} (Unit Cost: ${p.costPrice})
+                    {p.name} (Unit Cost: ₹{p.costPrice})
                   </option>
                 ))}
               </select>
@@ -833,7 +833,7 @@ export default function PurchasingPage() {
           <div className="space-y-4">
             <div className="p-3 bg-rose-50 dark:bg-rose-950/40 rounded-xl border border-rose-200 dark:border-rose-900 text-xs text-rose-700 dark:text-rose-300">
               You are rejecting purchase order <span className="font-bold">{rejectingPO.poNumber}</span> for{' '}
-              <span className="font-semibold">{rejectingPO.supplierName}</span> (${rejectingPO.totalAmount.toLocaleString()}).
+              <span className="font-semibold">{rejectingPO.supplierName}</span> (₹{rejectingPO.totalAmount.toLocaleString('en-IN')}).
             </div>
 
             <div>
@@ -1049,9 +1049,9 @@ export default function PurchasingPage() {
                         </td>
                         <td className="py-2.5 font-mono text-[11px] text-slate-500">{item.sku}</td>
                         <td className="py-2.5 text-right font-medium">{item.quantity}</td>
-                        <td className="py-2.5 text-right">${item.unitPrice.toFixed(2)}</td>
+                        <td className="py-2.5 text-right">₹{item.unitPrice.toFixed(2)}</td>
                         <td className="py-2.5 text-right font-bold text-slate-900 dark:text-white">
-                          ${item.total.toFixed(2)}
+                          ₹{item.total.toFixed(2)}
                         </td>
                       </tr>
                     ))}
@@ -1069,16 +1069,16 @@ export default function PurchasingPage() {
                 <div className="w-full sm:w-60 space-y-1.5 text-xs text-right">
                   <div className="flex justify-between text-slate-500">
                     <span>Subtotal:</span>
-                    <span>${previewPO.totalAmount.toFixed(2)}</span>
+                    <span>₹{previewPO.totalAmount.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-slate-500">
                     <span>Estimated Shipping & Duty:</span>
-                    <span>$0.00 (Included)</span>
+                    <span>₹0.00 (Included)</span>
                   </div>
                   <div className="flex justify-between font-bold text-base text-slate-900 dark:text-white pt-2 border-t border-slate-200 dark:border-slate-800">
                     <span>Grand Total:</span>
                     <span className="text-blue-600 dark:text-blue-400 font-mono">
-                      ${previewPO.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ₹{previewPO.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
                 </div>

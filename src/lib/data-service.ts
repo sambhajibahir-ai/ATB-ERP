@@ -322,7 +322,7 @@ export async function createQuotation(data: {
     'User',
     'Created Quotation',
     'Sales & CRM',
-    `Created ${newQuote.quotationNumber} for ${newQuote.customerName} ($${newQuote.totalAmount.toLocaleString()})`
+    `Created ${newQuote.quotationNumber} for ${newQuote.customerName} (₹${newQuote.totalAmount.toLocaleString('en-IN')})`
   );
 
   return newQuote;
@@ -369,7 +369,7 @@ export async function convertQuotationToSalesOrder(
     'User',
     'Converted Quotation',
     'Sales & CRM',
-    `Converted ${quote.quotationNumber} into ${salesOrder.orderNumber} ($${salesOrder.totalAmount.toLocaleString()})`
+    `Converted ${quote.quotationNumber} into ${salesOrder.orderNumber} (₹${salesOrder.totalAmount.toLocaleString('en-IN')})`
   );
 
   return { salesOrder, quotation: quote };
@@ -458,7 +458,7 @@ export async function createSalesOrder(data: {
     'User',
     'Created Sales Order',
     'Sales & CRM',
-    `Created ${newOrder.orderNumber} for ${newOrder.customerName} ($${newOrder.totalAmount.toLocaleString()})`
+    `Created ${newOrder.orderNumber} for ${newOrder.customerName} (₹${newOrder.totalAmount.toLocaleString('en-IN')})`
   );
 
   return newOrder;
@@ -524,7 +524,7 @@ export async function createPurchaseOrder(data: {
     'User',
     'Created Purchase Order',
     'Purchasing',
-    `Created ${newPO.poNumber} for ${newPO.supplierName} ($${newPO.totalAmount.toLocaleString()}) - Status: Pending Review`
+    `Created ${newPO.poNumber} for ${newPO.supplierName} (₹${newPO.totalAmount.toLocaleString('en-IN')}) - Status: Pending Review`
   );
 
   return newPO;
@@ -546,7 +546,7 @@ export async function approvePurchaseOrder(
     reviewer,
     'Approved Purchase Order',
     'Purchasing',
-    `Purchase Order ${po.poNumber} for ${po.supplierName} ($${po.totalAmount.toLocaleString()}) approved and cleared for procurement`
+    `Purchase Order ${po.poNumber} for ${po.supplierName} (₹${po.totalAmount.toLocaleString('en-IN')}) approved and cleared for procurement`
   );
   return po;
 }
@@ -678,7 +678,7 @@ export async function addFinancialTransaction(
     'User',
     `Recorded ${newTx.type}`,
     'Finance & Accounts',
-    `${newTx.txNumber}: $${newTx.amount.toLocaleString()} - ${newTx.category}`
+    `${newTx.txNumber}: ₹${newTx.amount.toLocaleString('en-IN')} - ${newTx.category}`
   );
 
   return newTx;
