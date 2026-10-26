@@ -11,10 +11,32 @@ import {
 } from 'drizzle-orm/pg-core';
 
 // -------------------------------------------------------------
+// 0. Companies (Tenants & Licensing)
+// -------------------------------------------------------------
+export const companies = pgTable('companies', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  code: varchar('code', { length: 50 }).notNull().unique(),
+  email: varchar('email', { length: 255 }).notNull(),
+  phone: varchar('phone', { length: 50 }),
+  taxId: varchar('tax_id', { length: 100 }), // CIN / Reg No
+  gstin: varchar('gstin', { length: 50 }),
+  address: text('address'),
+  status: varchar('status', { length: 30 }).notNull().default('Active'), // Active, Pending, Suspended, Expired
+  licenseTier: varchar('license_tier', { length: 50 }).notNull().default('Enterprise'), // Trial, Starter, Growth, Enterprise
+  licenseExpiresAt: timestamp('license_expires_at').notNull(),
+  maxUsers: integer('max_users').default(10).notNull(),
+  approvedBy: varchar('approved_by', { length: 255 }),
+  approvedAt: timestamp('approved_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// -------------------------------------------------------------
 // 1. Users & Team Members
 // -------------------------------------------------------------
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
+  companyId: integer('company_id').notNull().default(1),
   name: varchar('name', { length: 255 }).notNull(),
   email: varchar('email', { length: 255 }).notNull().unique(),
   passwordHash: text('password_hash').notNull(),
@@ -22,6 +44,8 @@ export const users = pgTable('users', {
   department: varchar('department', { length: 100 }).notNull().default('Executive Administration'),
   avatar: text('avatar'),
   status: varchar('status', { length: 20 }).notNull().default('Active'),
+  isCompanyAdmin: boolean('is_company_admin').default(false).notNull(),
+  isPlatformAdmin: boolean('is_platform_admin').default(false).notNull(),
   lastLogin: timestamp('last_login'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
@@ -31,6 +55,7 @@ export const users = pgTable('users', {
 // -------------------------------------------------------------
 export const customers = pgTable('customers', {
   id: serial('id').primaryKey(),
+  companyId: integer('company_id').notNull().default(1),
   code: varchar('code', { length: 50 }).notNull().unique(),
   name: varchar('name', { length: 255 }).notNull(),
   email: varchar('email', { length: 255 }).notNull(),
@@ -49,6 +74,7 @@ export const customers = pgTable('customers', {
 // -------------------------------------------------------------
 export const suppliers = pgTable('suppliers', {
   id: serial('id').primaryKey(),
+  companyId: integer('company_id').notNull().default(1),
   code: varchar('code', { length: 50 }).notNull().unique(),
   name: varchar('name', { length: 255 }).notNull(),
   contactPerson: varchar('contact_person', { length: 255 }),
@@ -66,6 +92,7 @@ export const suppliers = pgTable('suppliers', {
 // -------------------------------------------------------------
 export const products = pgTable('products', {
   id: serial('id').primaryKey(),
+  companyId: integer('company_id').notNull().default(1),
   sku: varchar('sku', { length: 50 }).notNull().unique(),
   name: varchar('name', { length: 255 }).notNull(),
   description: text('description'),
@@ -87,6 +114,7 @@ export const products = pgTable('products', {
 // -------------------------------------------------------------
 export const quotations = pgTable('quotations', {
   id: serial('id').primaryKey(),
+  companyId: integer('company_id').notNull().default(1),
   quotationNumber: varchar('quotation_number', { length: 50 }).notNull().unique(),
   customerId: integer('customer_id').notNull(),
   customerName: varchar('customer_name', { length: 255 }).notNull(),
@@ -111,6 +139,7 @@ export const quotations = pgTable('quotations', {
 // -------------------------------------------------------------
 export const salesOrders = pgTable('sales_orders', {
   id: serial('id').primaryKey(),
+  companyId: integer('company_id').notNull().default(1),
   orderNumber: varchar('order_number', { length: 50 }).notNull().unique(),
   customerId: integer('customer_id').notNull(),
   customerName: varchar('customer_name', { length: 255 }).notNull(),
@@ -122,16 +151,17 @@ export const salesOrders = pgTable('sales_orders', {
   totalAmount: numeric('total_amount', { precision: 12, scale: 2 }).notNull(),
   paymentStatus: varchar('payment_status', { length: 30 }).default('Pending'), // Paid, Partial, Pending, Refunded
   orderStatus: varchar('order_status', { length: 30 }).default('Confirmed'), // Draft, Confirmed, Processing, Shipped, Delivered, Cancelled
-  itemsJson: jsonb('items_json').notNull(), // Array of { productId, productName, sku, quantity, unitPrice, total }
+  itemsJson: jsonb('items_json').notNull(), // Array of OrderItem
   notes: text('notes'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 // -------------------------------------------------------------
-// 6. Purchase Orders
+// 7. Purchase Orders
 // -------------------------------------------------------------
 export const purchaseOrders = pgTable('purchase_orders', {
   id: serial('id').primaryKey(),
+  companyId: integer('company_id').notNull().default(1),
   poNumber: varchar('po_number', { length: 50 }).notNull().unique(),
   supplierId: integer('supplier_id').notNull(),
   supplierName: varchar('supplier_name', { length: 255 }).notNull(),
@@ -148,10 +178,11 @@ export const purchaseOrders = pgTable('purchase_orders', {
 });
 
 // -------------------------------------------------------------
-// 7. Invoices & Billing
+// 8. Invoices & Billing
 // -------------------------------------------------------------
 export const invoices = pgTable('invoices', {
   id: serial('id').primaryKey(),
+  companyId: integer('company_id').notNull().default(1),
   invoiceNumber: varchar('invoice_number', { length: 50 }).notNull().unique(),
   salesOrderId: integer('sales_order_id'),
   customerId: integer('customer_id').notNull(),
@@ -171,10 +202,11 @@ export const invoices = pgTable('invoices', {
 });
 
 // -------------------------------------------------------------
-// 8. Inventory Stock Movements / Audit
+// 9. Inventory Stock Movements / Audit
 // -------------------------------------------------------------
 export const inventoryTransactions = pgTable('inventory_transactions', {
   id: serial('id').primaryKey(),
+  companyId: integer('company_id').notNull().default(1),
   productId: integer('product_id').notNull(),
   productName: varchar('product_name', { length: 255 }).notNull(),
   sku: varchar('sku', { length: 50 }).notNull(),
@@ -187,10 +219,11 @@ export const inventoryTransactions = pgTable('inventory_transactions', {
 });
 
 // -------------------------------------------------------------
-// 9. Financial Ledger & Cash Flow
+// 10. Financial Ledger & Cash Flow
 // -------------------------------------------------------------
 export const financialTransactions = pgTable('financial_transactions', {
   id: serial('id').primaryKey(),
+  companyId: integer('company_id').notNull().default(1),
   txNumber: varchar('tx_number', { length: 50 }).notNull().unique(),
   date: timestamp('date').defaultNow().notNull(),
   type: varchar('type', { length: 20 }).notNull(), // Income, Expense, Transfer
@@ -204,10 +237,11 @@ export const financialTransactions = pgTable('financial_transactions', {
 });
 
 // -------------------------------------------------------------
-// 10. Human Resources & Employees
+// 11. Human Resources & Employees
 // -------------------------------------------------------------
 export const employees = pgTable('employees', {
   id: serial('id').primaryKey(),
+  companyId: integer('company_id').notNull().default(1),
   employeeCode: varchar('employee_code', { length: 50 }).notNull().unique(),
   firstName: varchar('first_name', { length: 100 }).notNull(),
   lastName: varchar('last_name', { length: 100 }).notNull(),
@@ -222,10 +256,11 @@ export const employees = pgTable('employees', {
 });
 
 // -------------------------------------------------------------
-// 11. Work Orders & Manufacturing / Operations
+// 12. Work Orders & Manufacturing / Operations
 // -------------------------------------------------------------
 export const workOrders = pgTable('work_orders', {
   id: serial('id').primaryKey(),
+  companyId: integer('company_id').notNull().default(1),
   orderNumber: varchar('order_number', { length: 50 }).notNull().unique(),
   title: varchar('title', { length: 255 }).notNull(),
   productName: varchar('product_name', { length: 255 }),
@@ -241,14 +276,14 @@ export const workOrders = pgTable('work_orders', {
 });
 
 // -------------------------------------------------------------
-// 12. System Audit Logs
+// 13. System Audit Logs
 // -------------------------------------------------------------
 export const auditLogs = pgTable('audit_logs', {
   id: serial('id').primaryKey(),
+  companyId: integer('company_id').notNull().default(1),
   actor: varchar('actor', { length: 255 }).notNull(),
   action: varchar('action', { length: 100 }).notNull(),
   module: varchar('module', { length: 100 }).notNull(),
   details: text('details'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
-

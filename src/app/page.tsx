@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import Link from 'next/link';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { StatCard } from '@/components/ui/stat-card';
@@ -19,24 +19,37 @@ import {
   FileSpreadsheet,
 } from 'lucide-react';
 
-export default async function DashboardPage() {
+function DashboardLoadingFallback() {
+  return (
+    <div className="space-y-6 animate-pulse p-2">
+      <div className="h-44 rounded-3xl bg-slate-200 dark:bg-slate-800" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="h-28 rounded-2xl bg-slate-200 dark:bg-slate-800" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+async function DashboardContent() {
   const metrics = await getDashboardMetrics();
 
   return (
-    <DashboardLayout>
+    <>
       {/* Welcome Banner */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-700 via-indigo-700 to-slate-900 p-6 sm:p-8 text-white shadow-xl">
         <div className="relative z-10 max-w-2xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-xs font-semibold text-blue-200 mb-3 border border-white/10">
             <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-            <span>ATB Software Enterprise ERP Suite • Neon Postgres Powered</span>
+            <span>{metrics.company?.name || 'Enterprise Workspace'} • {metrics.company?.licenseTier || 'Enterprise'} Edition</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-            Welcome back, Aarav
+            {metrics.company?.name || 'Enterprise Command Center'}
           </h1>
           <p className="mt-2 text-sm text-blue-100/90 leading-relaxed">
-            Company operations are performing with robust margins. Cash reserves are healthy,
-            and all manufacturing pipelines are on schedule.
+            Multi-tenant company operations are running smoothly. Working capital and inventory levels are healthy,
+            and all data pipelines are strictly isolated for GST and enterprise compliance.
           </p>
 
           <div className="mt-5 flex flex-wrap items-center gap-3">
@@ -400,6 +413,16 @@ export default async function DashboardPage() {
           ))}
         </div>
       </div>
+    </>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <DashboardLayout>
+      <Suspense fallback={<DashboardLoadingFallback />}>
+        <DashboardContent />
+      </Suspense>
     </DashboardLayout>
   );
 }

@@ -3,7 +3,9 @@ import type { NextRequest } from 'next/server';
 
 const PUBLIC_PREFIXES = [
   '/login',
+  '/signup',
   '/api/auth/login',
+  '/api/auth/signup',
   '/api/auth/logout',
   '/api/auth/me',
   '/api/db',
@@ -18,8 +20,8 @@ export function middleware(request: NextRequest) {
     pathname.includes('.') || // e.g. favicon.ico, images, fonts
     PUBLIC_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix + '/'))
   ) {
-    // If user already logged in and visits /login, redirect to /
-    if (pathname === '/login') {
+    // If user already logged in and visits /login or /signup, redirect to /
+    if (pathname === '/login' || pathname === '/signup') {
       const session = request.cookies.get('atb_session')?.value;
       if (session) {
         return NextResponse.redirect(new URL('/', request.url));
@@ -55,3 +57,4 @@ export const config = {
     '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 };
+

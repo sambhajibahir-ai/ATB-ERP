@@ -5,10 +5,14 @@ export const COOKIE_NAME = 'atb_session';
 
 export interface SessionUser {
   id: number;
+  companyId: number;
+  companyName: string;
   name: string;
   email: string;
   role: string;
   department: string;
+  isCompanyAdmin?: boolean;
+  isPlatformAdmin?: boolean;
 }
 
 export interface SessionTokenPayload extends SessionUser {
@@ -88,3 +92,4 @@ export function verifySessionToken(token: string): SessionTokenPayload | null {
     return null;
   }
 }
+

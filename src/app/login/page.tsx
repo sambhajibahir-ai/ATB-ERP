@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, Suspense } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Shield,
@@ -14,48 +15,57 @@ import {
   AlertCircle,
   Building2,
   KeyRound,
+  UserPlus,
 } from 'lucide-react';
 
 const DEMO_ACCOUNTS = [
+  // Company 1: ATB Software Solutions
   {
+    company: 'ATB Software Solutions',
     name: 'Aarav Mehta',
-    role: 'CEO & Admin',
+    role: 'Platform Super Admin & CEO',
     email: 'aarav.mehta@atbsoftware.com',
     password: 'admin@123',
-    badge: 'Executive',
-    badgeColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+    badge: 'Co. 1 • Super Admin',
+    badgeColor: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
   },
   {
+    company: 'ATB Software Solutions',
     name: 'Ananya Iyer',
     role: 'Chief Financial Officer',
     email: 'ananya.iyer@atbsoftware.com',
     password: 'finance@123',
-    badge: 'Finance',
+    badge: 'Co. 1 • Finance',
     badgeColor: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
   },
+  // Company 2: Tata Advanced Robotics (Tenant 2)
   {
-    name: 'Sneha Kulkarni',
-    role: 'Supply Chain Director',
-    email: 'sneha.kulkarni@atbsoftware.com',
-    password: 'supply@123',
-    badge: 'Operations',
+    company: 'Tata Advanced Robotics',
+    name: 'Kabir Singhania',
+    role: 'Tata Robotics CEO & Admin',
+    email: 'kabir.singhania@tatarobotics.com',
+    password: 'tata@123',
+    badge: 'Co. 2 • Tenant CEO',
+    badgeColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+  },
+  {
+    company: 'Tata Advanced Robotics',
+    name: 'Riya Sen',
+    role: 'Tata Defence Sales Lead',
+    email: 'riya.sen@tatarobotics.com',
+    password: 'tata@123',
+    badge: 'Co. 2 • Sales Staff',
     badgeColor: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
   },
+  // Company 3: Nexus Quantum (Pending Approval Demo)
   {
-    name: 'Pooja Reddy',
-    role: 'People Operations Lead',
-    email: 'pooja.reddy@atbsoftware.com',
-    password: 'hr@123',
-    badge: 'HR & Payroll',
-    badgeColor: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-  },
-  {
-    name: 'Vikram Sharma',
-    role: 'Commercial Sales Lead',
-    email: 'vikram.sharma@atbsoftware.com',
-    password: 'sales@123',
-    badge: 'Sales CRM',
-    badgeColor: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+    company: 'Nexus Quantum Systems',
+    name: 'Rohan Deshmukh',
+    role: 'CEO (Pending Approval)',
+    email: 'rohan@nexusquantum.in',
+    password: 'nexus@123',
+    badge: 'Co. 3 • Pending',
+    badgeColor: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
   },
 ];
 
@@ -292,6 +302,17 @@ function LoginForm() {
                     </button>
                   ))}
                 </div>
+
+                {/* Register New Company Workspace Link */}
+                <div className="mt-4 pt-3 border-t border-white/5 text-center">
+                  <Link
+                    href="/signup"
+                    className="inline-flex items-center justify-center gap-2 w-full py-2.5 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-blue-300 hover:text-blue-200 transition-colors"
+                  >
+                    <UserPlus className="w-4 h-4 text-blue-400" />
+                    <span>Register New Company (Create Tenant & CEO Account)</span>
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
@@ -313,3 +334,4 @@ export default function LoginPage() {
     </Suspense>
   );
 }
+

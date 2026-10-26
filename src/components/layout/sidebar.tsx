@@ -60,6 +60,15 @@ export function Sidebar({
     email: string;
     role: string;
     department: string;
+    companyId?: number;
+    isCompanyAdmin?: boolean;
+    isPlatformAdmin?: boolean;
+  } | null>(null);
+  const [currentCompany, setCurrentCompany] = useState<{
+    id: number;
+    name: string;
+    code?: string;
+    licenseTier?: string;
   } | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -69,6 +78,9 @@ export function Sidebar({
       .then((data) => {
         if (data?.authenticated && data?.user) {
           setCurrentUser(data.user);
+          if (data?.company) {
+            setCurrentCompany(data.company);
+          }
         }
       })
       .catch(() => {});
@@ -126,12 +138,12 @@ export function Sidebar({
                   <span className="text-base font-bold tracking-tight text-slate-900 dark:text-white">
                     ATB ERP
                   </span>
-                  <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900">
-                    PRO
+                  <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900 uppercase">
+                    {currentCompany?.licenseTier || 'PRO'}
                   </span>
                 </div>
-                <span className="text-[11px] text-slate-400 font-medium truncate max-w-[120px]">
-                  ATB Software
+                <span className="text-[11px] text-slate-400 font-medium truncate max-w-[125px]" title={currentCompany?.name || 'ATB Software Solutions'}>
+                  {currentCompany?.name || 'ATB Software'}
                 </span>
               </div>
             </Link>
@@ -247,9 +259,9 @@ export function Sidebar({
                     {displayName}
                   </div>
                   <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate flex items-center gap-1">
-                    <span>{displayRole}</span>
+                    <span>{currentUser?.isCompanyAdmin ? 'CEO' : displayRole}</span>
                     <span>•</span>
-                    <span className="truncate">{displayDept}</span>
+                    <span className="truncate">{currentCompany?.code || displayDept}</span>
                   </div>
                 </div>
                 <Shield className="w-3.5 h-3.5 text-blue-500 shrink-0" />

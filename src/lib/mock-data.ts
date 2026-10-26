@@ -1,5 +1,24 @@
+export interface Company {
+  id: number;
+  name: string;
+  code: string;
+  email: string;
+  phone?: string;
+  taxId?: string;
+  gstin?: string;
+  address?: string;
+  status: 'Active' | 'Pending' | 'Suspended' | 'Expired';
+  licenseTier: 'Trial' | 'Starter' | 'Growth' | 'Enterprise';
+  licenseExpiresAt: string; // ISO date
+  maxUsers: number;
+  approvedBy?: string;
+  approvedAt?: string;
+  createdAt: string;
+}
+
 export interface User {
   id: number;
+  companyId: number;
   name: string;
   email: string;
   passwordHash: string;
@@ -7,12 +26,15 @@ export interface User {
   department: string;
   avatar?: string;
   status: 'Active' | 'Suspended';
+  isCompanyAdmin?: boolean; // Company CEO / primary admin
+  isPlatformAdmin?: boolean; // ATB ERP Super Admin
   lastLogin?: string;
   createdAt: string;
 }
 
 export interface Customer {
   id: number;
+  companyId?: number;
   code: string;
   name: string;
   email: string;
@@ -28,6 +50,7 @@ export interface Customer {
 
 export interface Supplier {
   id: number;
+  companyId?: number;
   code: string;
   name: string;
   contactPerson: string;
@@ -42,6 +65,7 @@ export interface Supplier {
 
 export interface Product {
   id: number;
+  companyId?: number;
   sku: string;
   name: string;
   description: string;
@@ -69,6 +93,7 @@ export interface OrderItem {
 
 export interface Quotation {
   id: number;
+  companyId?: number;
   quotationNumber: string;
   customerId: number;
   customerName: string;
@@ -90,6 +115,7 @@ export interface Quotation {
 
 export interface SalesOrder {
   id: number;
+  companyId?: number;
   orderNumber: string;
   customerId: number;
   customerName: string;
@@ -108,6 +134,7 @@ export interface SalesOrder {
 
 export interface PurchaseOrder {
   id: number;
+  companyId?: number;
   poNumber: string;
   supplierId: number;
   supplierName: string;
@@ -125,6 +152,7 @@ export interface PurchaseOrder {
 
 export interface Invoice {
   id: number;
+  companyId?: number;
   invoiceNumber: string;
   salesOrderId?: number;
   customerId: number;
@@ -145,6 +173,7 @@ export interface Invoice {
 
 export interface InventoryTransaction {
   id: number;
+  companyId?: number;
   productId: number;
   productName: string;
   sku: string;
@@ -158,6 +187,7 @@ export interface InventoryTransaction {
 
 export interface FinancialTransaction {
   id: number;
+  companyId?: number;
   txNumber: string;
   date: string;
   type: 'Income' | 'Expense' | 'Transfer';
@@ -172,6 +202,7 @@ export interface FinancialTransaction {
 
 export interface Employee {
   id: number;
+  companyId?: number;
   employeeCode: string;
   firstName: string;
   lastName: string;
@@ -187,6 +218,7 @@ export interface Employee {
 
 export interface WorkOrder {
   id: number;
+  companyId?: number;
   orderNumber: string;
   title: string;
   productName: string;
@@ -203,12 +235,68 @@ export interface WorkOrder {
 
 export interface AuditLog {
   id: number;
+  companyId?: number;
   actor: string;
   action: string;
   module: string;
   details: string;
   createdAt: string;
 }
+
+// -------------------------------------------------------------
+// Tenant Companies (Multi-Tenant Organization Directory)
+// -------------------------------------------------------------
+export const initialCompanies: Company[] = [
+  {
+    id: 1,
+    name: 'ATB Software Solutions Private Limited',
+    code: 'ATB-HQ',
+    email: 'contact@atbsoftware.com',
+    phone: '+91 80 4129 9000',
+    taxId: 'CIN: U72200KA2026PTC098765',
+    gstin: '29AABCU9603R1Z7',
+    address: 'ATB Tech Towers, Outer Ring Road, Bellandur, Bengaluru, Karnataka 560103',
+    status: 'Active',
+    licenseTier: 'Enterprise',
+    licenseExpiresAt: '2027-12-31T23:59:59Z',
+    maxUsers: 50,
+    approvedBy: 'Platform Founding Authority',
+    approvedAt: '2026-01-01T00:00:00Z',
+    createdAt: '2026-01-01T00:00:00Z',
+  },
+  {
+    id: 2,
+    name: 'Tata Advanced Robotics & Automation Ltd',
+    code: 'TATA-ROBOTICS',
+    email: 'operations@tatarobotics.com',
+    phone: '+91 22 6665 8282',
+    taxId: 'CIN: L29100MH2026PLC012345',
+    gstin: '27AAACT2727Q1ZW',
+    address: 'Bombay House, 24 Homi Mody Street, Fort, Mumbai, Maharashtra 400001',
+    status: 'Active',
+    licenseTier: 'Growth',
+    licenseExpiresAt: '2027-06-30T23:59:59Z',
+    maxUsers: 15,
+    approvedBy: 'Aarav Mehta (Platform Admin)',
+    approvedAt: '2026-02-01T10:00:00Z',
+    createdAt: '2026-02-01T09:00:00Z',
+  },
+  {
+    id: 3,
+    name: 'Nexus Quantum Sensor Systems Pvt Ltd',
+    code: 'NEXUS-QUANTUM',
+    email: 'partners@nexusquantum.in',
+    phone: '+91 40 2311 4455',
+    taxId: 'CIN: U31900TG2026PTC054321',
+    gstin: '36AABCN8899K1Z4',
+    address: 'HITEC City, Madhapur, Hyderabad, Telangana 500081',
+    status: 'Pending',
+    licenseTier: 'Trial',
+    licenseExpiresAt: '2026-11-26T23:59:59Z',
+    maxUsers: 5,
+    createdAt: '2026-10-20T14:30:00Z',
+  },
+];
 
 // -------------------------------------------------------------
 // Seed Data (ATB Software Enterprise - Indian Customers & Partners)
@@ -283,6 +371,37 @@ export const initialCustomers: Customer[] = [
     outstandingBalance: 4120,
     status: 'Active',
     createdAt: '2026-03-01T08:45:00Z',
+  },
+  // Company 2: Tata Advanced Robotics & Automation Ltd
+  {
+    id: 6,
+    companyId: 2,
+    code: 'CUST-TATA-001',
+    name: 'Defence Research & Development Organisation (DRDO)',
+    email: 'procurement@drdo.gov.in',
+    phone: '+91 11 2301 2244',
+    company: 'DRDO Directorate of Systems',
+    taxNumber: 'GSTIN-07AAAGD0101A1Z9',
+    address: 'DRDO Bhawan, Rajaji Marg, New Delhi 110011',
+    creditLimit: 5000000,
+    outstandingBalance: 1200000,
+    status: 'Active',
+    createdAt: '2026-02-10T10:00:00Z',
+  },
+  {
+    id: 7,
+    companyId: 2,
+    code: 'CUST-TATA-002',
+    name: 'Bharat Heavy Electricals Limited (BHEL)',
+    email: 'automation@bhel.in',
+    phone: '+91 755 250 0100',
+    company: 'BHEL Heavy Plant Division',
+    taxNumber: 'GSTIN-23AAACB2500P1Z6',
+    address: 'BHEL Industrial Complex, Piplani, Bhopal, Madhya Pradesh 462022',
+    creditLimit: 3000000,
+    outstandingBalance: 450000,
+    status: 'Active',
+    createdAt: '2026-02-15T11:00:00Z',
   },
 ];
 
@@ -431,6 +550,43 @@ export const initialProducts: Product[] = [
     status: 'Active',
     createdAt: '2026-02-05T10:00:00Z',
   },
+  // Company 2: Tata Advanced Robotics Products
+  {
+    id: 7,
+    companyId: 2,
+    sku: 'TATA-ROB-6AXIS',
+    name: 'Tata Heavy Duty 6-Axis Industrial Robotic Arm (500kg payload)',
+    description: 'Precision articulated robotic arm for automotive welding, foundry and heavy handling.',
+    category: 'Industrial Hardware',
+    unit: 'unit',
+    costPrice: 1850000,
+    sellingPrice: 2650000,
+    currentStock: 12,
+    minStock: 2,
+    maxStock: 50,
+    warehouseLocation: 'Pune Assembly Hangar B',
+    barcode: '890123490001',
+    status: 'Active',
+    createdAt: '2026-02-01T00:00:00Z',
+  },
+  {
+    id: 8,
+    companyId: 2,
+    sku: 'TATA-AGV-1000',
+    name: 'Autonomous Guided Transport Vehicle (1-Ton LiDAR AGV)',
+    description: 'Self-navigating heavy factory warehouse transport vehicle with SLAM LiDAR navigation.',
+    category: 'Industrial Hardware',
+    unit: 'unit',
+    costPrice: 620000,
+    sellingPrice: 940000,
+    currentStock: 8,
+    minStock: 2,
+    maxStock: 30,
+    warehouseLocation: 'Pune Assembly Hangar C',
+    barcode: '890123490002',
+    status: 'Active',
+    createdAt: '2026-02-05T00:00:00Z',
+  },
 ];
 
 export const initialQuotations: Quotation[] = [
@@ -543,6 +699,36 @@ export const initialQuotations: Quotation[] = [
     notes: 'Customer opted for alternative fiber optics solution.',
     createdAt: '2026-02-10T12:00:00Z',
   },
+  // Company 2: Tata Advanced Robotics Quotation
+  {
+    id: 6,
+    companyId: 2,
+    quotationNumber: 'QTN-TATA-2026-001',
+    customerId: 6,
+    customerName: 'Defence Research & Development Organisation (DRDO)',
+    customerEmail: 'procurement@drdo.gov.in',
+    issueDate: '2026-02-20T10:00:00Z',
+    expiryDate: '2026-04-20T10:00:00Z',
+    subtotal: 5300000,
+    taxRate: 18,
+    taxAmount: 954000,
+    discountAmount: 200000,
+    totalAmount: 6054000,
+    status: 'Sent',
+    itemsJson: [
+      {
+        productId: 7,
+        productName: 'Tata Heavy Duty 6-Axis Industrial Robotic Arm (500kg payload)',
+        sku: 'TATA-ROB-6AXIS',
+        quantity: 2,
+        unitPrice: 2650000,
+        total: 5300000,
+      },
+    ],
+    terms: 'Delivery within 45 days. 3-Year Onsite Comprehensive Maintenance included.',
+    notes: 'Defence heavy manufacturing specification.',
+    createdAt: '2026-02-20T10:00:00Z',
+  },
 ];
 
 export const initialSalesOrders: SalesOrder[] = [
@@ -623,6 +809,34 @@ export const initialSalesOrders: SalesOrder[] = [
     ],
     notes: 'Awaiting manufacturing confirmation on sensor allocation.',
     createdAt: '2026-03-12T16:00:00Z',
+  },
+  // Company 2: Tata Advanced Robotics Sales Order
+  {
+    id: 5,
+    companyId: 2,
+    orderNumber: 'SO-TATA-2026-001',
+    customerId: 7,
+    customerName: 'Bharat Heavy Electricals Limited (BHEL)',
+    orderDate: '2026-02-25T11:00:00Z',
+    deliveryDate: '2026-03-30T11:00:00Z',
+    subtotal: 2650000,
+    taxAmount: 477000,
+    discountAmount: 50000,
+    totalAmount: 3077000,
+    paymentStatus: 'Partial',
+    orderStatus: 'Processing',
+    itemsJson: [
+      {
+        productId: 7,
+        productName: 'Tata Heavy Duty 6-Axis Industrial Robotic Arm (500kg payload)',
+        sku: 'TATA-ROB-6AXIS',
+        quantity: 1,
+        unitPrice: 2650000,
+        total: 2650000,
+      },
+    ],
+    notes: 'BHEL Plant Automation Phase 1 Project',
+    createdAt: '2026-02-25T11:00:00Z',
   },
 ];
 
@@ -712,6 +926,36 @@ export const initialInvoices: Invoice[] = [
     ],
     terms: 'Net 14 payment terms apply.',
     createdAt: '2026-03-12T17:00:00Z',
+  },
+  // Company 2: Tata Advanced Robotics Invoice
+  {
+    id: 5,
+    companyId: 2,
+    invoiceNumber: 'INV-TATA-2026-001',
+    salesOrderId: 5,
+    customerId: 7,
+    customerName: 'Bharat Heavy Electricals Limited (BHEL)',
+    customerEmail: 'automation@bhel.in',
+    issueDate: '2026-02-25T12:00:00Z',
+    dueDate: '2026-03-27T18:00:00Z',
+    subtotal: 2650000,
+    taxRate: 18,
+    taxAmount: 477000,
+    totalAmount: 3077000,
+    amountPaid: 1500000,
+    status: 'Partial',
+    itemsJson: [
+      {
+        productId: 7,
+        productName: 'Tata Heavy Duty 6-Axis Industrial Robotic Arm (500kg payload)',
+        sku: 'TATA-ROB-6AXIS',
+        quantity: 1,
+        unitPrice: 2650000,
+        total: 2650000,
+      },
+    ],
+    terms: '50% advance received via RTGS, balance on commissioning.',
+    createdAt: '2026-02-25T12:00:00Z',
   },
 ];
 
@@ -882,6 +1126,21 @@ export const initialFinancialTransactions: FinancialTransaction[] = [
     description: 'Customs clearing, port logistics, and air cargo handling.',
     createdAt: '2026-03-12T14:20:00Z',
   },
+  // Company 2: Tata Advanced Robotics Financial Transaction
+  {
+    id: 7,
+    companyId: 2,
+    txNumber: 'TX-TATA-2026-001',
+    date: '2026-02-25T14:00:00Z',
+    type: 'Income',
+    category: 'Product Sales',
+    amount: 1500000.0,
+    paymentMethod: 'RTGS / Wire',
+    reference: 'RTGS-BHEL-88910 / BHEL Plant Division',
+    status: 'Completed',
+    description: 'Advance payment 50% for 6-Axis Industrial Robotic Arm order.',
+    createdAt: '2026-02-25T14:00:00Z',
+  },
 ];
 
 export const initialEmployees: Employee[] = [
@@ -969,6 +1228,52 @@ export const initialEmployees: Employee[] = [
     status: 'Active',
     createdAt: '2024-02-15T09:00:00Z',
   },
+  // Company 2: Tata Advanced Robotics Employees
+  {
+    id: 7,
+    companyId: 2,
+    employeeCode: 'TATA-EMP-001',
+    firstName: 'Kabir',
+    lastName: 'Singhania',
+    email: 'kabir.singhania@tatarobotics.com',
+    phone: '+91 22 6665 8201',
+    department: 'Chief Executive Office',
+    position: 'Chief Executive Officer & MD',
+    salary: 450000,
+    joinDate: '2026-02-01T00:00:00Z',
+    status: 'Active',
+    createdAt: '2026-02-01T00:00:00Z',
+  },
+  {
+    id: 8,
+    companyId: 2,
+    employeeCode: 'TATA-EMP-002',
+    firstName: 'Riya',
+    lastName: 'Sen',
+    email: 'riya.sen@tatarobotics.com',
+    phone: '+91 22 6665 8202',
+    department: 'Defence & Industrial Sales',
+    position: 'Director of Business Development',
+    salary: 190000,
+    joinDate: '2026-02-05T00:00:00Z',
+    status: 'Active',
+    createdAt: '2026-02-05T00:00:00Z',
+  },
+  {
+    id: 9,
+    companyId: 2,
+    employeeCode: 'TATA-EMP-003',
+    firstName: 'Arjun',
+    lastName: 'Patel',
+    email: 'arjun.patel@tatarobotics.com',
+    phone: '+91 22 6665 8203',
+    department: 'Finance & Accounts',
+    position: 'Chief Financial Officer',
+    salary: 210000,
+    joinDate: '2026-02-10T00:00:00Z',
+    status: 'Active',
+    createdAt: '2026-02-10T00:00:00Z',
+  },
 ];
 
 export const initialWorkOrders: WorkOrder[] = [
@@ -1055,8 +1360,10 @@ export const initialAuditLogs: AuditLog[] = [
 ];
 
 export const initialUsers: User[] = [
+  // Company 1: ATB Software Solutions (Super Admin & Company 1 staff)
   {
     id: 1,
+    companyId: 1,
     name: 'Aarav Mehta',
     email: 'aarav.mehta@atbsoftware.com',
     passwordHash: 'atb_enterprise_salt:810994b9a120f32beacf710b423445cdee1b248281a217953f5a988ecddf30bfeabd15684121214a6b8e11d699b2b1b48e63632ae09b8c6f0ba849f43a3aa9ad',
@@ -1064,11 +1371,14 @@ export const initialUsers: User[] = [
     department: 'Executive Administration',
     avatar: 'AM',
     status: 'Active',
+    isCompanyAdmin: true,
+    isPlatformAdmin: true,
     lastLogin: '2026-03-19T08:30:00Z',
     createdAt: '2026-01-01T00:00:00Z',
   },
   {
     id: 2,
+    companyId: 1,
     name: 'Ananya Iyer',
     email: 'ananya.iyer@atbsoftware.com',
     passwordHash: 'atb_enterprise_salt:2d98a9762b329378ab34dc667b3ca93b8ca05ed5501e6c5b21f02da6da94990304b8aa8c7acd712d0f03af27cdcbe67f53b6a34f7c8a40e6a9d2981437780803',
@@ -1076,11 +1386,14 @@ export const initialUsers: User[] = [
     department: 'Finance & Accounts',
     avatar: 'AI',
     status: 'Active',
+    isCompanyAdmin: false,
+    isPlatformAdmin: false,
     lastLogin: '2026-03-19T09:15:00Z',
     createdAt: '2026-01-05T00:00:00Z',
   },
   {
     id: 3,
+    companyId: 1,
     name: 'Sneha Kulkarni',
     email: 'sneha.kulkarni@atbsoftware.com',
     passwordHash: 'atb_enterprise_salt:0129fc8af983a9cecd43afb8dfb76bd342971e9bb97e756aec11fcc8c1dddfa5e4064fa76eef8de256f80bfd9be81980d11a955259342eb94b70a268efb30d0b',
@@ -1088,11 +1401,14 @@ export const initialUsers: User[] = [
     department: 'Supply Chain & Procurement',
     avatar: 'SK',
     status: 'Active',
+    isCompanyAdmin: false,
+    isPlatformAdmin: false,
     lastLogin: '2026-03-18T14:40:00Z',
     createdAt: '2026-01-10T00:00:00Z',
   },
   {
     id: 4,
+    companyId: 1,
     name: 'Pooja Reddy',
     email: 'pooja.reddy@atbsoftware.com',
     passwordHash: 'atb_enterprise_salt:a59e98c8605b2a5a2148d9c0dc281630f85f34c8a92139e03c6a01444141f3378ab5a29363c53ba58633c751af2db692b818b3bacc5f1962192487bdce254ef4',
@@ -1100,11 +1416,14 @@ export const initialUsers: User[] = [
     department: 'Human Resources',
     avatar: 'PR',
     status: 'Active',
+    isCompanyAdmin: false,
+    isPlatformAdmin: false,
     lastLogin: '2026-03-17T11:20:00Z',
     createdAt: '2026-01-15T00:00:00Z',
   },
   {
     id: 5,
+    companyId: 1,
     name: 'Vikram Sharma',
     email: 'vikram.sharma@atbsoftware.com',
     passwordHash: 'atb_enterprise_salt:bc545c452fc0e2c9cb07e332fe5161d6f1742cae1272a629f580334065c000304199ecc83b5d6fd8db148f6a9511d7963c77043a77abffe8d775d99b35e0b51f',
@@ -1112,8 +1431,72 @@ export const initialUsers: User[] = [
     department: 'Commercial Sales & CRM',
     avatar: 'VS',
     status: 'Active',
+    isCompanyAdmin: false,
+    isPlatformAdmin: false,
     lastLogin: '2026-03-19T07:45:00Z',
     createdAt: '2026-02-01T00:00:00Z',
+  },
+  // Company 2: Tata Advanced Robotics & Automation Ltd (Company CEO & Sub-Accounts)
+  {
+    id: 6,
+    companyId: 2,
+    name: 'Kabir Singhania',
+    email: 'kabir.singhania@tatarobotics.com',
+    passwordHash: 'atb_enterprise_salt:5de901524cf8364d83e0de11d805ea27986b95a301ba7139f4f0916185cfe740bec57d4da108403c407d4ba4038fe06056ac9c7d1e4e46fed4ac523f8a6a23eb',
+    role: 'Admin',
+    department: 'Chief Executive Office',
+    avatar: 'KS',
+    status: 'Active',
+    isCompanyAdmin: true,
+    isPlatformAdmin: false,
+    lastLogin: '2026-03-19T10:00:00Z',
+    createdAt: '2026-02-01T00:00:00Z',
+  },
+  {
+    id: 7,
+    companyId: 2,
+    name: 'Riya Sen',
+    email: 'riya.sen@tatarobotics.com',
+    passwordHash: 'atb_enterprise_salt:5de901524cf8364d83e0de11d805ea27986b95a301ba7139f4f0916185cfe740bec57d4da108403c407d4ba4038fe06056ac9c7d1e4e46fed4ac523f8a6a23eb',
+    role: 'Sales',
+    department: 'Defence & Industrial Sales',
+    avatar: 'RS',
+    status: 'Active',
+    isCompanyAdmin: false,
+    isPlatformAdmin: false,
+    lastLogin: '2026-03-18T16:20:00Z',
+    createdAt: '2026-02-05T00:00:00Z',
+  },
+  {
+    id: 8,
+    companyId: 2,
+    name: 'Arjun Patel',
+    email: 'arjun.patel@tatarobotics.com',
+    passwordHash: 'atb_enterprise_salt:5de901524cf8364d83e0de11d805ea27986b95a301ba7139f4f0916185cfe740bec57d4da108403c407d4ba4038fe06056ac9c7d1e4e46fed4ac523f8a6a23eb',
+    role: 'Finance',
+    department: 'Treasury & Accounts',
+    avatar: 'AP',
+    status: 'Active',
+    isCompanyAdmin: false,
+    isPlatformAdmin: false,
+    lastLogin: '2026-03-18T12:00:00Z',
+    createdAt: '2026-02-10T00:00:00Z',
+  },
+  // Company 3: Nexus Quantum (Pending Approval Demo CEO)
+  {
+    id: 9,
+    companyId: 3,
+    name: 'Rohan Deshmukh',
+    email: 'rohan@nexusquantum.in',
+    passwordHash: 'atb_enterprise_salt:4c36160c2361d1a33a8034b046e062c5e867fa704e49a787d596ea85e2f4a739be641039a276ddc20e6b9b568ce79c1d674dc187c257e959fcef3baf85193adf',
+    role: 'Admin',
+    department: 'Founding Leadership',
+    avatar: 'RD',
+    status: 'Active',
+    isCompanyAdmin: true,
+    isPlatformAdmin: false,
+    lastLogin: undefined,
+    createdAt: '2026-10-20T14:30:00Z',
   },
 ];
 

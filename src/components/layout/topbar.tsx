@@ -14,6 +14,8 @@ import {
   LogOut,
   Shield,
   Key,
+  Building2,
+  Clock,
 } from 'lucide-react';
 
 interface DbStatus {
@@ -43,6 +45,19 @@ export function Topbar({ onMobileOpen }: TopbarProps) {
     email: string;
     role: string;
     department: string;
+    companyId?: number;
+    companyName?: string;
+    isCompanyAdmin?: boolean;
+    isPlatformAdmin?: boolean;
+  } | null>(null);
+  const [currentCompany, setCurrentCompany] = useState<{
+    id: number;
+    name: string;
+    code?: string;
+    licenseTier?: string;
+    licenseExpiresAt?: string;
+    status?: string;
+    maxUsers?: number;
   } | null>(null);
 
   useEffect(() => {
@@ -71,10 +86,19 @@ export function Topbar({ onMobileOpen }: TopbarProps) {
       .then((data) => {
         if (data?.authenticated && data?.user) {
           setCurrentUser(data.user);
+          if (data?.company) {
+            setCurrentCompany(data.company);
+          }
         }
       })
       .catch(() => {});
   }, []);
+
+  const daysRemaining = currentCompany?.licenseExpiresAt
+    ? Math.ceil(
+        (new Date(currentCompany.licenseExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+      )
+    : null;
 
   async function handleLogout() {
     try {
@@ -110,7 +134,34 @@ export function Topbar({ onMobileOpen }: TopbarProps) {
       </div>
 
       {/* Right Action Items */}
-      <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+      <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+        {/* Active Company Pill & License Tier */}
+        <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100/90 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 text-xs">
+          <Building2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+          <span
+            className="font-semibold text-slate-800 dark:text-slate-200 max-w-[130px] truncate"
+            title={currentCompany?.name || 'ATB Software Solutions'}
+          >
+            {currentCompany?.name || 'ATB Software'}
+          </span>
+          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900">
+            {currentCompany?.licenseTier || 'Enterprise'}
+          </span>
+          {daysRemaining !== null && daysRemaining <= 30 && (
+            <span
+              className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                daysRemaining <= 7
+                  ? 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900'
+                  : 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-900'
+              }`}
+              title={`License expires on ${new Date(currentCompany!.licenseExpiresAt!).toLocaleDateString()}`}
+            >
+              <Clock className="w-2.5 h-2.5" />
+              <span>{daysRemaining <= 0 ? 'Expired' : `${daysRemaining}d left`}</span>
+            </span>
+          )}
+        </div>
+
         {/* Neon Database Live Status Pill */}
         <Link
           href="/settings"
@@ -291,10 +342,24 @@ export function Topbar({ onMobileOpen }: TopbarProps) {
                 <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
                   {currentUser?.email || 'aarav.mehta@atbsoftware.com'}
                 </div>
-                <div className="mt-2 flex items-center gap-1.5">
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300">
-                    {currentUser?.role || 'Admin'}
-                  </span>
+                <div className="mt-1 flex items-center gap-1.5 text-[11px] font-medium text-slate-600 dark:text-slate-300 truncate">
+                  <Building2 className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                  <span className="truncate">{currentCompany?.name || 'ATB Software Solutions'}</span>
+                </div>
+                <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                  {currentUser?.isPlatformAdmin ? (
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300">
+                      Platform Super Admin
+                    </span>
+                  ) : currentUser?.isCompanyAdmin ? (
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300">
+                      Company CEO
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300">
+                      {currentUser?.role || 'Admin'}
+                    </span>
+                  )}
                   <span className="text-[10px] text-slate-400">
                     {currentUser?.department || 'System Admin'}
                   </span>

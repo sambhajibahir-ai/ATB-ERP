@@ -11,6 +11,7 @@ import {
   Server,
   Shield,
   Building,
+  Building2,
   Key,
   Clock,
   Sparkles,
@@ -27,11 +28,45 @@ import {
   Search,
   Eye,
   EyeOff,
+  Award,
+  Ban,
+  Calendar,
+  Layers,
+  ChevronRight,
 } from 'lucide-react';
-import { AuditLog, User } from '@/lib/mock-data';
+import { AuditLog, User, Company } from '@/lib/mock-data';
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<'neon' | 'users' | 'company' | 'roles' | 'audit'>('neon');
+  const [activeTab, setActiveTab] = useState<'neon' | 'companies' | 'users' | 'company' | 'roles' | 'audit'>('companies');
+
+  // Active Session context
+  const [currentSession, setCurrentSession] = useState<{
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+    department: string;
+    companyId: number;
+    companyName: string;
+    isCompanyAdmin?: boolean;
+    isPlatformAdmin?: boolean;
+  } | null>(null);
+
+  // Companies Management (Multi-Tenant Platform Governance)
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [isLoadingCompanies, setIsLoadingCompanies] = useState(false);
+  const [companySearch, setCompanySearch] = useState('');
+  const [showEditLicenseModal, setShowEditLicenseModal] = useState(false);
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+
+  const [editLicenseTier, setEditLicenseTier] = useState<Company['licenseTier']>('Enterprise');
+  const [editLicenseExpiry, setEditLicenseExpiry] = useState('');
+  const [editMaxUsers, setEditMaxUsers] = useState(10);
+  const [editCompanyStatus, setEditCompanyStatus] = useState<Company['status']>('Active');
+
+  const [companyFeedbackSuccess, setCompanyFeedbackSuccess] = useState('');
+  const [companyFeedbackError, setCompanyFeedbackError] = useState('');
+  const [isUpdatingCompany, setIsUpdatingCompany] = useState(false);
 
   // Users Management state
   const [users, setUsers] = useState<User[]>([]);
@@ -86,6 +121,36 @@ export default function SettingsPage() {
   // Audit Logs
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
 
+  async function fetchSession() {
+    try {
+      const res = await fetch('/api/auth/me');
+      const data = await res.json();
+      if (data?.authenticated && data?.user) {
+        setCurrentSession(data.user);
+        if (!data.user.isPlatformAdmin) {
+          setActiveTab('users');
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function fetchCompanies() {
+    setIsLoadingCompanies(true);
+    try {
+      const res = await fetch('/api/companies');
+      const data = await res.json();
+      if (data?.companies) {
+        setCompanies(data.companies);
+      }
+    } catch (err) {
+      console.error('Failed to load companies:', err);
+    } finally {
+      setIsLoadingCompanies(false);
+    }
+  }
+
   async function fetchUsers() {
     setIsLoadingUsers(true);
     try {
@@ -102,19 +167,19 @@ export default function SettingsPage() {
   }
 
   useEffect(() => {
+    fetchSession();
+    fetchCompanies();
+    fetchUsers();
+
     // Check initial connection
     fetch('/api/db/test')
       .then((res) => res.json())
       .then((data) => setTestResult(data))
       .catch(() => {});
 
-    // Fetch initial users
-    fetchUsers();
-
     // Load audit logs
     fetch('/api/sales')
       .then(() => {
-        // mock audit logs
         const defaultLogs: AuditLog[] = [
           {
             id: 1,
@@ -153,6 +218,105 @@ export default function SettingsPage() {
       });
   }, []);
 
+  // Company Platform Actions
+  async function handleApproveCompany(company: Company) {
+    setCompanyFeedbackError('');
+    setCompanyFeedbackSuccess('');
+    try {
+      const res = await fetch('/api/companies', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'approve',
+          companyId: company.id,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to approve company');
+      }
+      setCompanyFeedbackSuccess(`Company ${company.name} approved! The tenant CEO can now sign in.`);
+      fetchCompanies();
+      setTimeout(() => setCompanyFeedbackSuccess(''), 4500);
+    } catch (err: unknown) {
+      const error = err as Error;
+      setCompanyFeedbackError(error.message);
+    }
+  }
+
+  async function handleToggleCompanyStatus(company: Company) {
+    setCompanyFeedbackError('');
+    setCompanyFeedbackSuccess('');
+    try {
+      const res = await fetch('/api/companies', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'toggle_status',
+          companyId: company.id,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to update company status');
+      }
+      setCompanyFeedbackSuccess(`Company ${company.name} status updated to ${data.company.status}.`);
+      fetchCompanies();
+      setTimeout(() => setCompanyFeedbackSuccess(''), 4000);
+    } catch (err: unknown) {
+      const error = err as Error;
+      setCompanyFeedbackError(error.message);
+    }
+  }
+
+  function openEditLicenseModal(company: Company) {
+    setSelectedCompany(company);
+    setEditLicenseTier(company.licenseTier);
+    setEditLicenseExpiry(company.licenseExpiresAt ? company.licenseExpiresAt.slice(0, 10) : '');
+    setEditMaxUsers(company.maxUsers);
+    setEditCompanyStatus(company.status);
+    setCompanyFeedbackError('');
+    setShowEditLicenseModal(true);
+  }
+
+  async function handleSaveLicense(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedCompany) return;
+    setIsUpdatingCompany(true);
+    setCompanyFeedbackError('');
+
+    try {
+      const res = await fetch('/api/companies', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_license',
+          companyId: selectedCompany.id,
+          licenseTier: editLicenseTier,
+          licenseExpiresAt: new Date(editLicenseExpiry + 'T23:59:59Z').toISOString(),
+          maxUsers: editMaxUsers,
+          status: editCompanyStatus,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to update company license parameters');
+      }
+
+      setCompanyFeedbackSuccess(`License parameters updated for ${selectedCompany.name}.`);
+      setShowEditLicenseModal(false);
+      fetchCompanies();
+      setTimeout(() => setCompanyFeedbackSuccess(''), 4000);
+    } catch (err: unknown) {
+      const error = err as Error;
+      setCompanyFeedbackError(error.message);
+    } finally {
+      setIsUpdatingCompany(false);
+    }
+  }
+
+  // User Actions
   async function handleCreateUser(e: React.FormEvent) {
     e.preventDefault();
     setUserActionError('');
@@ -178,7 +342,7 @@ export default function SettingsPage() {
         return;
       }
 
-      setUserActionSuccess(`User ${newUserName} created successfully.`);
+      setUserActionSuccess(`Sub-account ${newUserName} provisioned successfully under your company license.`);
       setShowAddUserModal(false);
       setNewUserName('');
       setNewUserEmail('');
@@ -193,7 +357,7 @@ export default function SettingsPage() {
     }
   }
 
-  function openEditModal(user: User) {
+  function openEditUserModal(user: User) {
     setSelectedUser(user);
     setEditRole(user.role);
     setEditDept(user.department);
@@ -243,7 +407,12 @@ export default function SettingsPage() {
   }
 
   async function handleDeleteUser(user: User) {
-    if (!confirm(`Are you sure you want to decommission access for ${user.name} (${user.email})?`)) {
+    if (user.isCompanyAdmin) {
+      alert('The primary CEO / Administrator account of a company cannot be deleted.');
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to decommission sub-account access for ${user.name} (${user.email})?`)) {
       return;
     }
 
@@ -254,7 +423,7 @@ export default function SettingsPage() {
         alert(data.error || 'Failed to decommission user');
         return;
       }
-      setUserActionSuccess(`User ${user.name} decommissioned successfully.`);
+      setUserActionSuccess(`Sub-account ${user.name} decommissioned successfully.`);
       fetchUsers();
       setTimeout(() => setUserActionSuccess(''), 4000);
     } catch {
@@ -311,30 +480,57 @@ export default function SettingsPage() {
     setTimeout(() => setCompanySaved(false), 2500);
   }
 
+  // Active Company for Tenant
+  const myCompany = companies.find((c) => c.id === currentSession?.companyId) || companies[0];
+
   return (
     <DashboardLayout>
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-          Settings & Neon DB Connector
-        </h1>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
-          Configure Neon PostgreSQL serverless database, company identity, role permissions, and system audits
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+            Enterprise Settings & Platform Governance
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Multi-Tenant Company Licensing, Sub-Account Provisioning, Role Matrices, and Database Management
+          </p>
+        </div>
+
+        {myCompany && (
+          <div className="flex items-center gap-2 p-2 px-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+            <Building2 className="w-4 h-4 text-blue-500 shrink-0" />
+            <div className="text-xs">
+              <span className="font-bold text-slate-900 dark:text-white">{myCompany.name}</span>
+              <span className="mx-1.5 text-slate-400">•</span>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900">
+                {myCompany.licenseTier} License
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 overflow-x-auto whitespace-nowrap pb-px">
+        {/* Company Accounts & Approvals (Visible to Super Admin or all) */}
         <button
-          onClick={() => setActiveTab('neon')}
+          onClick={() => {
+            setActiveTab('companies');
+            fetchCompanies();
+          }}
           className={`pb-3 px-3 text-xs font-semibold border-b-2 transition-all flex items-center gap-1.5 ${
-            activeTab === 'neon'
+            activeTab === 'companies'
               ? 'border-blue-600 text-blue-600 dark:text-blue-400'
               : 'border-transparent text-slate-500 hover:text-slate-900'
           }`}
         >
-          <Database className="w-4 h-4" />
-          <span>Neon PostgreSQL Studio</span>
+          <Building2 className="w-4 h-4" />
+          <span>Company Accounts & Approval</span>
+          {companies.filter((c) => c.status === 'Pending').length > 0 && (
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-500 text-white animate-pulse">
+              {companies.filter((c) => c.status === 'Pending').length}
+            </span>
+          )}
         </button>
 
         <button
@@ -349,7 +545,19 @@ export default function SettingsPage() {
           }`}
         >
           <Key className="w-4 h-4" />
-          <span>Users & Credentials</span>
+          <span>Sub-Accounts & Credentials</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('neon')}
+          className={`pb-3 px-3 text-xs font-semibold border-b-2 transition-all flex items-center gap-1.5 ${
+            activeTab === 'neon'
+              ? 'border-blue-600 text-blue-600 dark:text-blue-400'
+              : 'border-transparent text-slate-500 hover:text-slate-900'
+          }`}
+        >
+          <Database className="w-4 h-4" />
+          <span>Neon PostgreSQL Studio</span>
         </button>
 
         <button
@@ -389,10 +597,469 @@ export default function SettingsPage() {
         </button>
       </div>
 
+      {/* TAB: Company Accounts & Approval */}
+      {activeTab === 'companies' && (
+        <div className="space-y-6">
+          {/* Quick Metrics */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+              <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">Total Companies</div>
+              <div className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{companies.length}</div>
+              <div className="mt-0.5 text-[10px] text-slate-400">Enterprise tenants</div>
+            </div>
+            <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+              <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">Active Workspaces</div>
+              <div className="mt-1 text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                {companies.filter((c) => c.status === 'Active').length}
+              </div>
+              <div className="mt-0.5 text-[10px] text-slate-400">Approved & licensed</div>
+            </div>
+            <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+              <div className="text-xs font-semibold text-amber-600 dark:text-amber-400">Pending Approvals</div>
+              <div className="mt-1 text-2xl font-black text-amber-600 dark:text-amber-400">
+                {companies.filter((c) => c.status === 'Pending').length}
+              </div>
+              <div className="mt-0.5 text-[10px] text-slate-400">Awaiting admin review</div>
+            </div>
+            <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+              <div className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">Tenant Data Isolation</div>
+              <div className="mt-1 text-sm font-bold text-slate-900 dark:text-white">Strict Row-Level</div>
+              <div className="mt-0.5 text-[10px] text-slate-400">Filtered by company_id</div>
+            </div>
+          </div>
+
+          {/* Feedback banners */}
+          {companyFeedbackSuccess && (
+            <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs font-semibold text-emerald-700 dark:text-emerald-300 flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                {companyFeedbackSuccess}
+              </span>
+              <button onClick={() => setCompanyFeedbackSuccess('')} className="p-1 hover:bg-emerald-100 rounded">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
+          {companyFeedbackError && (
+            <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-xs font-semibold text-rose-700 dark:text-rose-300 flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+                {companyFeedbackError}
+              </span>
+              <button onClick={() => setCompanyFeedbackError('')} className="p-1 hover:bg-rose-100 rounded">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
+          {/* Pending Companies Notification Alert */}
+          {companies.filter((c) => c.status === 'Pending').length > 0 && (
+            <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-amber-500 text-white shadow-xs">
+                  <Clock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-amber-900 dark:text-amber-200">
+                    New Company Registration Awaiting Approval
+                  </h4>
+                  <p className="text-[11px] text-amber-700 dark:text-amber-300">
+                    There are {companies.filter((c) => c.status === 'Pending').length} company workspace(s) awaiting verification. Click &quot;Approve Workspace&quot; below to grant immediate access.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Companies Toolbar */}
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search companies by name, code, email, tax ID..."
+                value={companySearch}
+                onChange={(e) => setCompanySearch(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-blue-500 text-slate-900 dark:text-white"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={fetchCompanies}
+                disabled={isLoadingCompanies}
+                className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"
+                title="Refresh companies"
+              >
+                <RefreshCw className={`w-4 h-4 ${isLoadingCompanies ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+          </div>
+
+          {/* Companies Table */}
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-xs">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs whitespace-nowrap">
+                <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 uppercase text-[10px]">
+                  <tr>
+                    <th className="py-3 px-4">Company Entity & Code</th>
+                    <th className="py-3 px-4">Corporate Contact</th>
+                    <th className="py-3 px-4">Tax / GSTIN</th>
+                    <th className="py-3 px-4">Account Status</th>
+                    <th className="py-3 px-4">License Tier & Quota</th>
+                    <th className="py-3 px-4">License Valid Until</th>
+                    <th className="py-3 px-4 text-right">Administrative Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {companies
+                    .filter((c) => {
+                      const q = companySearch.toLowerCase();
+                      return (
+                        c.name.toLowerCase().includes(q) ||
+                        c.code.toLowerCase().includes(q) ||
+                        c.email.toLowerCase().includes(q) ||
+                        (c.taxId && c.taxId.toLowerCase().includes(q))
+                      );
+                    })
+                    .map((comp) => {
+                      const isExpired = new Date(comp.licenseExpiresAt).getTime() < Date.now();
+                      const daysLeft = Math.ceil(
+                        (new Date(comp.licenseExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+                      );
+
+                      return (
+                        <tr key={comp.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+                          <td className="py-3.5 px-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+                                {comp.code.slice(0, 3)}
+                              </div>
+                              <div>
+                                <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                                  <span>{comp.name}</span>
+                                  {comp.id === 1 && (
+                                    <span className="text-[10px] px-1 rounded bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-mono">
+                                      Platform HQ
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-[11px] text-slate-400 font-mono">Code: {comp.code}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <div className="text-slate-800 dark:text-slate-200">{comp.email}</div>
+                            <div className="text-[11px] text-slate-400">{comp.phone || 'N/A'}</div>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <div className="font-mono text-slate-700 dark:text-slate-300">{comp.gstin || 'N/A'}</div>
+                            <div className="text-[10px] text-slate-400">{comp.taxId || 'N/A'}</div>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            {comp.status === 'Active' ? (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                Active
+                              </span>
+                            ) : comp.status === 'Pending' ? (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 animate-pulse">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                Pending Review
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 dark:bg-rose-950 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800">
+                                <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                                Suspended
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <div className="flex items-center gap-1.5">
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900">
+                                {comp.licenseTier}
+                              </span>
+                              <span className="text-[11px] text-slate-500 font-medium">
+                                ({comp.maxUsers} seats)
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <div className="text-slate-800 dark:text-slate-200 font-medium">
+                              {new Date(comp.licenseExpiresAt).toLocaleDateString()}
+                            </div>
+                            <div className={`text-[10px] font-semibold ${isExpired ? 'text-rose-500' : daysLeft < 30 ? 'text-amber-500' : 'text-emerald-600'}`}>
+                              {isExpired ? 'License Expired' : `${daysLeft} days remaining`}
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {comp.status === 'Pending' && (
+                                <button
+                                  onClick={() => handleApproveCompany(comp)}
+                                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold shadow-xs transition-colors"
+                                  title="Approve Company & Grant Access"
+                                >
+                                  <Check className="w-3.5 h-3.5" />
+                                  <span>Approve</span>
+                                </button>
+                              )}
+
+                              <button
+                                onClick={() => openEditLicenseModal(comp)}
+                                className="flex items-center gap-1 p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors"
+                                title="Manage License Tier & Expiration Date"
+                              >
+                                <Award className="w-3.5 h-3.5" />
+                                <span className="text-[11px] hidden md:inline">License</span>
+                              </button>
+
+                              {comp.id !== 1 && (
+                                <button
+                                  onClick={() => handleToggleCompanyStatus(comp)}
+                                  className={`p-1.5 rounded-lg transition-colors ${
+                                    comp.status === 'Active'
+                                      ? 'text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40'
+                                      : 'text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'
+                                  }`}
+                                  title={comp.status === 'Active' ? 'Suspend Company Access' : 'Reactivate Company'}
+                                >
+                                  <Ban className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: Users & Sub-Accounts Management */}
+      {activeTab === 'users' && (
+        <div className="space-y-6">
+          {/* Company License Quota Banner */}
+          {myCompany && (
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-900/40 via-indigo-900/30 to-slate-900 border border-blue-800/40 p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-blue-600 text-white shadow-xs">
+                  <Shield className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <span>{myCompany.name}</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                      {myCompany.licenseTier} Plan
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-300 mt-0.5">
+                    User Seat Quota: <strong>{users.length}</strong> / <strong>{myCompany.maxUsers}</strong> accounts provisioned • License Valid until: <strong>{new Date(myCompany.licenseExpiresAt).toLocaleDateString()}</strong>
+                  </p>
+                </div>
+              </div>
+
+              {users.length >= myCompany.maxUsers && (
+                <span className="px-2.5 py-1 rounded-xl text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0">
+                  Seat Limit Reached
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Feedback alerts */}
+          {userActionSuccess && (
+            <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs font-semibold text-emerald-700 dark:text-emerald-300 flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                {userActionSuccess}
+              </span>
+              <button onClick={() => setUserActionSuccess('')} className="p-1 hover:bg-emerald-100 dark:hover:bg-emerald-900 rounded">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
+          {userActionError && (
+            <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-xs font-semibold text-rose-700 dark:text-rose-300 flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+                {userActionError}
+              </span>
+              <button onClick={() => setUserActionError('')} className="p-1 hover:bg-rose-100 dark:hover:bg-rose-900 rounded">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
+          {/* Toolbar */}
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search team member by name, email, department, role..."
+                value={userSearch}
+                onChange={(e) => setUserSearch(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-blue-500 text-slate-900 dark:text-white"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={fetchUsers}
+                disabled={isLoadingUsers}
+                className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"
+                title="Refresh user directory"
+              >
+                <RefreshCw className={`w-4 h-4 ${isLoadingUsers ? 'animate-spin' : ''}`} />
+              </button>
+
+              <button
+                onClick={() => {
+                  setUserActionError('');
+                  setShowAddUserModal(true);
+                }}
+                disabled={myCompany && users.length >= myCompany.maxUsers}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs shadow-blue-500/20 transition-colors disabled:opacity-50"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>Add Sub-Account</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Users Table */}
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-xs">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs whitespace-nowrap">
+                <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 uppercase text-[10px]">
+                  <tr>
+                    <th className="py-3 px-4">Member Name & Contact</th>
+                    <th className="py-3 px-4">Assigned Role</th>
+                    <th className="py-3 px-4">Department</th>
+                    <th className="py-3 px-4">Access Level</th>
+                    <th className="py-3 px-4">Account Status</th>
+                    <th className="py-3 px-4">Last Activity</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {users
+                    .filter((u) => {
+                      const q = userSearch.toLowerCase();
+                      return (
+                        u.name.toLowerCase().includes(q) ||
+                        u.email.toLowerCase().includes(q) ||
+                        u.role.toLowerCase().includes(q) ||
+                        u.department.toLowerCase().includes(q)
+                      );
+                    })
+                    .map((user) => {
+                      const roleColors: Record<string, string> = {
+                        Admin: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
+                        Finance: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+                        Inventory: 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+                        Sales: 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border-blue-200 dark:border-blue-800',
+                        HR: 'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border-purple-200 dark:border-purple-800',
+                        Operations: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700',
+                      };
+
+                      return (
+                        <tr key={user.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+                          <td className="py-3.5 px-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+                                {user.name
+                                  .split(' ')
+                                  .map((n) => n[0])
+                                  .join('')
+                                  .slice(0, 2)
+                                  .toUpperCase()}
+                              </div>
+                              <div>
+                                <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                                  <span>{user.name}</span>
+                                  {user.isCompanyAdmin && (
+                                    <span className="text-[10px] px-1.5 py-0.2 rounded font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-900">
+                                      Company CEO / Admin
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-[11px] text-slate-400 font-mono">{user.email}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                                roleColors[user.role] || roleColors.Operations
+                              }`}
+                            >
+                              {user.role}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300">
+                            {user.department}
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                              {user.isCompanyAdmin ? 'Company Administrator' : 'Sub-Account Staff'}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            {user.status === 'Active' ? (
+                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                Active
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 dark:bg-rose-950 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800">
+                                <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                                Suspended
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 text-slate-500 text-[11px]">
+                            {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Active Session'}
+                          </td>
+                          <td className="py-3.5 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => openEditUserModal(user)}
+                                className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors"
+                                title="Edit Role & Reset Password"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+                              {!user.isCompanyAdmin && (
+                                <button
+                                  onClick={() => handleDeleteUser(user)}
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                                  title="Decommission sub-account access"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* TAB 1: Neon Database Studio */}
       {activeTab === 'neon' && (
         <div className="space-y-6">
-          {/* Connection Status Card */}
           <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-xs">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-start gap-3.5">
@@ -436,142 +1103,14 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 self-start sm:self-auto">
-                <button
-                  onClick={() => handleTestConnection()}
-                  disabled={isTesting}
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-semibold transition-colors"
-                >
-                  <RotateCw className={`w-3.5 h-3.5 ${isTesting ? 'animate-spin' : ''}`} />
-                  <span>Re-test Connection</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Test / Configure Neon Connection String */}
-          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-xs space-y-4">
-            <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <span>Configure Live Neon PostgreSQL URL</span>
-                <span className="text-[10px] text-blue-600 font-semibold bg-blue-50 dark:bg-blue-950 px-2 py-0.5 rounded-full">
-                  @neondatabase/serverless + Drizzle ORM
-                </span>
-              </h3>
-              <p className="text-xs text-slate-500 mt-1">
-                Paste your pooled or direct Neon connection string. It is read from your project’s{' '}
-                <code className="text-blue-600 dark:text-blue-400 font-mono">.env.local</code> file as{' '}
-                <code className="text-blue-600 dark:text-blue-400 font-mono">DATABASE_URL</code>.
-              </p>
-            </div>
-
-            <form onSubmit={handleTestConnection} className="space-y-3">
-              <div className="flex flex-col sm:flex-row gap-2">
-                <div className="relative flex-1">
-                  <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="password"
-                    value={connectionString}
-                    onChange={(e) => setConnectionString(e.target.value)}
-                    placeholder="postgresql://[user]:[password]@[endpoint].us-east-2.aws.neon.tech/neondb?sslmode=require"
-                    className="w-full pl-9 pr-4 py-2.5 text-xs font-mono rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={isTesting || !connectionString}
-                  className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold transition-colors shrink-0"
-                >
-                  {isTesting ? 'Verifying...' : 'Validate Connection'}
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between text-xs text-slate-500 pt-2">
-                <span>Don’t have a database yet? Create a free serverless PostgreSQL database at Neon:</span>
-                <a
-                  href="https://neon.tech"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-blue-600 dark:text-blue-400 font-semibold hover:underline inline-flex items-center gap-1"
-                >
-                  <span>neon.tech</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
-              </div>
-            </form>
-          </div>
-
-          {/* Database Setup & Seeding Action Box */}
-          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-xs space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                  Database Migrations & Seed Center
-                </h3>
-                <p className="text-xs text-slate-500 mt-1">
-                  1-Click push DDL schema tables and initialize with realistic enterprise catalog, sales, suppliers, and ledger data.
-                </p>
-              </div>
-
               <button
-                onClick={handleSeedDatabase}
-                disabled={isSeeding}
-                className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs shadow-emerald-500/20 disabled:opacity-50 transition-colors shrink-0"
+                onClick={handleTestConnection}
+                disabled={isTesting}
+                className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
               >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>{isSeeding ? 'Seeding Tables...' : 'Seed Neon Database'}</span>
+                <RotateCw className={`w-3.5 h-3.5 ${isTesting ? 'animate-spin' : ''}`} />
+                <span>Test Live Ping</span>
               </button>
-            </div>
-
-            {seedResult && (
-              <div
-                className={`p-3.5 rounded-xl border text-xs ${
-                  seedResult.success
-                    ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300'
-                    : 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300'
-                }`}
-              >
-                <div className="font-semibold">{seedResult.message}</div>
-                {seedResult.rowsInserted !== undefined && (
-                  <div className="mt-1 text-[11px] opacity-90">
-                    Inserted {seedResult.rowsInserted} initial corporate records across inventory and CRM.
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Drizzle Schema Tables Summary */}
-            <div className="pt-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                Registered Enterprise Schema Tables (13 Entities)
-              </span>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-2.5">
-                {[
-                  { table: 'users', desc: 'Team & RBAC' },
-                  { table: 'customers', desc: 'CRM Accounts' },
-                  { table: 'suppliers', desc: 'Approved Vendors' },
-                  { table: 'products', desc: 'SKUs & Inventory' },
-                  { table: 'quotations', desc: 'Price Estimates & Quotes' },
-                  { table: 'sales_orders', desc: 'Client Orders' },
-                  { table: 'purchase_orders', desc: 'Procurement' },
-                  { table: 'invoices', desc: 'Commercial Billing' },
-                  { table: 'inventory_transactions', desc: 'Stock Ledger' },
-                  { table: 'financial_transactions', desc: 'General Ledger' },
-                  { table: 'employees', desc: 'Staff Directory' },
-                  { table: 'work_orders', desc: 'Manufacturing' },
-                  { table: 'audit_logs', desc: 'Audit Trail' },
-                ].map((item) => (
-                  <div
-                    key={item.table}
-                    className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 text-xs"
-                  >
-                    <div className="font-mono font-bold text-slate-900 dark:text-white">
-                      {item.table}
-                    </div>
-                    <div className="text-[10px] text-slate-500">{item.desc}</div>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
         </div>
@@ -583,7 +1122,7 @@ export default function SettingsPage() {
           <form onSubmit={handleSaveCompany} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Company Legal Entity Name
+                Company Legal Name
               </label>
               <input
                 type="text"
@@ -593,46 +1132,30 @@ export default function SettingsPage() {
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Corporate Tax Identification / EIN
+                  Tax Registration / CIN
                 </label>
                 <input
                   type="text"
                   value={taxId}
                   onChange={(e) => setTaxId(e.target.value)}
-                  className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white"
+                  className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white font-mono"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Base Accounting Currency
+                  Default Currency
                 </label>
-                <select
+                <input
+                  type="text"
                   value={currency}
                   onChange={(e) => setCurrency(e.target.value)}
                   className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white"
-                >
-                  <option value="INR (₹)">INR - Indian Rupee (₹)</option>
-                  <option value="USD ($)">USD - US Dollar ($)</option>
-                  <option value="EUR (€)">EUR - Euro (€)</option>
-                  <option value="GBP (£)">GBP - British Pound (£)</option>
-                </select>
+                />
               </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Fiscal Financial Year Period
-              </label>
-              <input
-                type="text"
-                value={fiscalYear}
-                onChange={(e) => setFiscalYear(e.target.value)}
-                className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white"
-              />
             </div>
 
             <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
@@ -661,47 +1184,45 @@ export default function SettingsPage() {
         <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-xs">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs whitespace-nowrap">
-            <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 uppercase text-[10px]">
-              <tr>
-                <th className="py-3 px-4">Role Title</th>
-                <th className="py-3 px-4">Executive Dashboard</th>
-                <th className="py-3 px-4">Sales & CRM</th>
-                <th className="py-3 px-4">Inventory & Warehouse</th>
-                <th className="py-3 px-4">Purchasing</th>
-                <th className="py-3 px-4">Finance & Ledger</th>
-                <th className="py-3 px-4">HR & Payroll</th>
-                <th className="py-3 px-4">System Settings</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {[
-                { role: 'System Admin (CEO)', perms: [true, true, true, true, true, true, true] },
-                { role: 'Chief Financial Officer', perms: [true, true, false, true, true, false, false] },
-                { role: 'Supply Chain Director', perms: [true, false, true, true, false, false, false] },
-                { role: 'Sales Account Director', perms: [true, true, false, false, false, false, false] },
-                { role: 'People Operations Lead', perms: [true, false, false, false, false, true, false] },
-              ].map((r) => (
-                <tr key={r.role}>
-                  <td className="py-3.5 px-4 font-bold text-slate-900 dark:text-white">
-                    {r.role}
-                  </td>
-                  {r.perms.map((p, idx) => (
-                    <td key={idx} className="py-3.5 px-4">
-                      {p ? (
-                        <span className="inline-flex items-center text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950 px-2 py-0.5 rounded-full">
-                          Full Access
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center text-[10px] font-medium text-slate-400">
-                          Restricted
-                        </span>
-                      )}
-                    </td>
-                  ))}
+              <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 uppercase text-[10px]">
+                <tr>
+                  <th className="py-3 px-4">Role Title</th>
+                  <th className="py-3 px-4">Executive Dashboard</th>
+                  <th className="py-3 px-4">Sales & CRM</th>
+                  <th className="py-3 px-4">Inventory & Warehouse</th>
+                  <th className="py-3 px-4">Purchasing</th>
+                  <th className="py-3 px-4">Finance & Ledger</th>
+                  <th className="py-3 px-4">HR & Payroll</th>
+                  <th className="py-3 px-4">Sub-Accounts Vault</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {[
+                  { role: 'Company CEO (Admin)', perms: [true, true, true, true, true, true, true] },
+                  { role: 'Chief Financial Officer', perms: [true, true, false, true, true, false, false] },
+                  { role: 'Supply Chain Director', perms: [true, false, true, true, false, false, false] },
+                  { role: 'Commercial Sales Lead', perms: [true, true, false, false, false, false, false] },
+                  { role: 'People Operations Lead', perms: [true, false, false, false, false, true, false] },
+                ].map((r) => (
+                  <tr key={r.role}>
+                    <td className="py-3.5 px-4 font-bold text-slate-900 dark:text-white">{r.role}</td>
+                    {r.perms.map((p, idx) => (
+                      <td key={idx} className="py-3.5 px-4">
+                        {p ? (
+                          <span className="inline-flex items-center text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950 px-2 py-0.5 rounded-full">
+                            Full Access
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center text-[10px] font-medium text-slate-400">
+                            Restricted
+                          </span>
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
@@ -714,15 +1235,11 @@ export default function SettingsPage() {
               <div key={log.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-2.5">
                   <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-                  <span className="font-bold text-slate-900 dark:text-white">
-                    {log.actor}
-                  </span>
+                  <span className="font-bold text-slate-900 dark:text-white">{log.actor}</span>
                   <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                     {log.module}
                   </span>
-                  <span className="text-slate-600 dark:text-slate-400">
-                    {log.details}
-                  </span>
+                  <span className="text-slate-600 dark:text-slate-400">{log.details}</span>
                 </div>
                 <span className="text-[11px] text-slate-400 font-mono">
                   {new Date(log.createdAt).toLocaleString()}
@@ -733,214 +1250,118 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* TAB: Users & Credentials */}
-      {activeTab === 'users' && (
-        <div className="space-y-6">
-          {/* Quick Metrics */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-              <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">Total Accounts</div>
-              <div className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{users.length}</div>
-              <div className="mt-0.5 text-[10px] text-slate-400">Corporate directory</div>
-            </div>
-            <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-              <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">Active Personnel</div>
-              <div className="mt-1 text-2xl font-black text-emerald-600 dark:text-emerald-400">
-                {users.filter((u) => u.status === 'Active').length}
+      {/* Edit Company License Modal */}
+      {showEditLicenseModal && selectedCompany && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-6 relative">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 border border-blue-200 dark:border-blue-900">
+                  <Award className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                    Manage Enterprise License
+                  </h3>
+                  <p className="text-[11px] text-slate-400 font-medium truncate max-w-xs">
+                    {selectedCompany.name} ({selectedCompany.code})
+                  </p>
+                </div>
               </div>
-              <div className="mt-0.5 text-[10px] text-slate-400">Authorized personnel</div>
-            </div>
-            <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-              <div className="text-xs font-semibold text-blue-600 dark:text-blue-400">Security Standard</div>
-              <div className="mt-1 text-sm font-bold text-slate-900 dark:text-white">PBKDF2-SHA512</div>
-              <div className="mt-0.5 text-[10px] text-slate-400">10,000 salt iterations</div>
-            </div>
-            <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-              <div className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">Session Protocol</div>
-              <div className="mt-1 text-sm font-bold text-slate-900 dark:text-white">HMAC-SHA256</div>
-              <div className="mt-0.5 text-[10px] text-slate-400">HttpOnly signed token</div>
-            </div>
-          </div>
-
-          {/* Feedback alerts */}
-          {userActionSuccess && (
-            <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs font-semibold text-emerald-700 dark:text-emerald-300 flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                {userActionSuccess}
-              </span>
-              <button onClick={() => setUserActionSuccess('')} className="p-1 hover:bg-emerald-100 dark:hover:bg-emerald-900 rounded">
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
-
-          {userActionError && (
-            <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-xs font-semibold text-rose-700 dark:text-rose-300 flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
-                {userActionError}
-              </span>
-              <button onClick={() => setUserActionError('')} className="p-1 hover:bg-rose-100 dark:hover:bg-rose-900 rounded">
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
-
-          {/* Toolbar */}
-          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search user by name, email, department, role..."
-                value={userSearch}
-                onChange={(e) => setUserSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-blue-500 text-slate-900 dark:text-white"
-              />
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0">
               <button
-                onClick={fetchUsers}
-                disabled={isLoadingUsers}
-                className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"
-                title="Refresh user directory"
+                onClick={() => setShowEditLicenseModal(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
               >
-                <RefreshCw className={`w-4 h-4 ${isLoadingUsers ? 'animate-spin' : ''}`} />
-              </button>
-
-              <button
-                onClick={() => {
-                  setUserActionError('');
-                  setShowAddUserModal(true);
-                }}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs shadow-blue-500/20 transition-colors"
-              >
-                <UserPlus className="w-4 h-4" />
-                <span>Add User</span>
+                <X className="w-4 h-4" />
               </button>
             </div>
-          </div>
 
-          {/* Users Table */}
-          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-xs">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs whitespace-nowrap">
-                <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 uppercase text-[10px]">
-                  <tr>
-                    <th className="py-3 px-4">User & Contact</th>
-                    <th className="py-3 px-4">Role</th>
-                    <th className="py-3 px-4">Department</th>
-                    <th className="py-3 px-4">Account Status</th>
-                    <th className="py-3 px-4">Last Activity</th>
-                    <th className="py-3 px-4">Created</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {users
-                    .filter((u) => {
-                      const q = userSearch.toLowerCase();
-                      return (
-                        u.name.toLowerCase().includes(q) ||
-                        u.email.toLowerCase().includes(q) ||
-                        u.role.toLowerCase().includes(q) ||
-                        u.department.toLowerCase().includes(q)
-                      );
-                    })
-                    .map((user) => {
-                      const roleColors: Record<string, string> = {
-                        Admin: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
-                        Finance: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
-                        Inventory: 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800',
-                        Sales: 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border-blue-200 dark:border-blue-800',
-                        HR: 'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border-purple-200 dark:border-purple-800',
-                        Operations: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700',
-                      };
+            <form onSubmit={handleSaveLicense} className="mt-4 space-y-3.5">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    License Tier
+                  </label>
+                  <select
+                    value={editLicenseTier}
+                    onChange={(e) => setEditLicenseTier(e.target.value as any)}
+                    className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="Trial">Trial (Free 30 Days)</option>
+                    <option value="Starter">Starter (5 Seats)</option>
+                    <option value="Growth">Growth (20 Seats)</option>
+                    <option value="Enterprise">Enterprise (50+ Seats)</option>
+                  </select>
+                </div>
 
-                      return (
-                        <tr key={user.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
-                          <td className="py-3.5 px-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
-                                {user.name
-                                  .split(' ')
-                                  .map((n) => n[0])
-                                  .join('')
-                                  .slice(0, 2)
-                                  .toUpperCase()}
-                              </div>
-                              <div>
-                                <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                                  <span>{user.name}</span>
-                                  {user.id === 1 && (
-                                    <span className="text-[10px] px-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 font-mono">
-                                      Owner
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="text-[11px] text-slate-400 font-mono">{user.email}</div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="py-3.5 px-4">
-                            <span
-                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                                roleColors[user.role] || roleColors.Operations
-                              }`}
-                            >
-                              {user.role}
-                            </span>
-                          </td>
-                          <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300">
-                            {user.department}
-                          </td>
-                          <td className="py-3.5 px-4">
-                            {user.status === 'Active' ? (
-                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                Active
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 dark:bg-rose-950 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800">
-                                <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                                Suspended
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-3.5 px-4 text-slate-500 text-[11px]">
-                            {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Active Session'}
-                          </td>
-                          <td className="py-3.5 px-4 text-slate-400 text-[11px]">
-                            {new Date(user.createdAt).toLocaleDateString()}
-                          </td>
-                          <td className="py-3.5 px-4 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <button
-                                onClick={() => openEditModal(user)}
-                                className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors"
-                                title="Edit Role & Reset Password"
-                              >
-                                <Edit3 className="w-3.5 h-3.5" />
-                              </button>
-                              {user.id !== 1 && (
-                                <button
-                                  onClick={() => handleDeleteUser(user)}
-                                  className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
-                                  title="Decommission user access"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                </tbody>
-              </table>
-            </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Max User Seats
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={500}
+                    value={editMaxUsers}
+                    onChange={(e) => setEditMaxUsers(Number(e.target.value))}
+                    className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  License Expiration Date *
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={editLicenseExpiry}
+                  onChange={(e) => setEditLicenseExpiry(e.target.value)}
+                  className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Company Account Status
+                </label>
+                <select
+                  value={editCompanyStatus}
+                  onChange={(e) => setEditCompanyStatus(e.target.value as any)}
+                  className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
+                >
+                  <option value="Active">Active (Authorized)</option>
+                  <option value="Pending">Pending Approval</option>
+                  <option value="Suspended">Suspended (Access Blocked)</option>
+                  <option value="Expired">Expired</option>
+                </select>
+              </div>
+
+              {companyFeedbackError && (
+                <div className="p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-[11px] font-semibold text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900">
+                  {companyFeedbackError}
+                </div>
+              )}
+
+              <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowEditLicenseModal(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdatingCompany}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs shadow-blue-500/20 disabled:opacity-50"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>{isUpdatingCompany ? 'Saving...' : 'Save License'}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -956,10 +1377,10 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                    Provision New User Account
+                    Provision Team Sub-Account
                   </h3>
                   <p className="text-[11px] text-slate-400">
-                    Creates authenticated login credentials with PBKDF2 hashing
+                    Creates authenticated staff login under {myCompany?.name || 'your company'}
                   </p>
                 </div>
               </div>
@@ -993,7 +1414,7 @@ export default function SettingsPage() {
                 <input
                   type="email"
                   required
-                  placeholder="e.g. ramesh.patel@atbsoftware.com"
+                  placeholder="e.g. ramesh.patel@company.com"
                   value={newUserEmail}
                   onChange={(e) => setNewUserEmail(e.target.value)}
                   className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
@@ -1033,8 +1454,7 @@ export default function SettingsPage() {
                     onChange={(e) => setNewUserRole(e.target.value as any)}
                     className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
                   >
-                    <option value="Admin">Admin (Full Access)</option>
-                    <option value="Finance">Finance (CFO / Ledgers)</option>
+                    <option value="Finance">Finance (CFO / Invoices)</option>
                     <option value="Inventory">Inventory (Warehouse)</option>
                     <option value="Sales">Sales (CRM / Orders)</option>
                     <option value="HR">HR (People / Payroll)</option>
@@ -1075,7 +1495,7 @@ export default function SettingsPage() {
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs shadow-blue-500/20 disabled:opacity-50"
                 >
                   <UserPlus className="w-3.5 h-3.5" />
-                  <span>{isSubmittingUser ? 'Provisioning...' : 'Provision User'}</span>
+                  <span>{isSubmittingUser ? 'Provisioning...' : 'Provision Sub-Account'}</span>
                 </button>
               </div>
             </form>
@@ -1094,7 +1514,7 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                    Update User Credentials & Role
+                    Update Sub-Account Credentials
                   </h3>
                   <p className="text-[11px] text-slate-400 font-mono truncate max-w-xs">
                     {selectedUser.name} ({selectedUser.email})
@@ -1120,7 +1540,7 @@ export default function SettingsPage() {
                     onChange={(e) => setEditRole(e.target.value as any)}
                     className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
                   >
-                    <option value="Admin">Admin</option>
+                    {selectedUser.isCompanyAdmin && <option value="Admin">Admin (CEO)</option>}
                     <option value="Finance">Finance</option>
                     <option value="Inventory">Inventory</option>
                     <option value="Sales">Sales</option>
@@ -1211,4 +1631,3 @@ export default function SettingsPage() {
     </DashboardLayout>
   );
 }
-

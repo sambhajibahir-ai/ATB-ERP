@@ -23,19 +23,24 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create signed session token
+    // Create signed session token with company tenant context
     const token = createSessionToken({
       id: user.id,
+      companyId: user.company.id,
+      companyName: user.company.name,
       name: user.name,
       email: user.email,
       role: user.role,
       department: user.department,
+      isCompanyAdmin: !!user.isCompanyAdmin,
+      isPlatformAdmin: !!user.isPlatformAdmin,
     });
 
     const response = NextResponse.json({
       success: true,
-      message: `Welcome back, ${user.name}!`,
+      message: `Welcome back, ${user.name}! (${user.company.name})`,
       user,
+      company: user.company,
     });
 
     // Set secure HTTP-only cookie
@@ -58,3 +63,4 @@ export async function POST(request: Request) {
     );
   }
 }
+

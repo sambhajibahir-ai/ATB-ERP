@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySessionToken, COOKIE_NAME } from '@/lib/auth';
-import { getUserById } from '@/lib/data-service';
+import { getUserById, getCompanyById } from '@/lib/data-service';
 
 export async function GET() {
   try {
@@ -19,10 +19,18 @@ export async function GET() {
 
     // Refresh user state from data service if available
     const freshUser = await getUserById(payload.id);
+    const companyId = freshUser?.companyId || payload.companyId || 1;
+    const company = await getCompanyById(companyId);
 
     return NextResponse.json({
       authenticated: true,
       user: freshUser || payload,
+      company: company || {
+        id: companyId,
+        name: payload.companyName || 'Corporate Enterprise',
+        licenseTier: 'Enterprise',
+        status: 'Active',
+      },
     });
   } catch (error: unknown) {
     const err = error as Error;
@@ -32,3 +40,4 @@ export async function GET() {
     );
   }
 }
+
