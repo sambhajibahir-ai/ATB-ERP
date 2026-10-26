@@ -69,7 +69,7 @@ export async function getEffectiveCompanyId(overrideCompanyId?: number): Promise
     const cookieStore = await cookies();
     const token = cookieStore.get(COOKIE_NAME)?.value;
     if (token) {
-      const payload = verifySessionToken(token);
+      const payload = await verifySessionToken(token);
       if (payload && payload.companyId) {
         return payload.companyId;
       }

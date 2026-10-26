@@ -13,7 +13,7 @@ export async function GET() {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get(COOKIE_NAME)?.value;
-    const session = token ? verifySessionToken(token) : null;
+    const session = token ? await verifySessionToken(token) : null;
 
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -38,7 +38,7 @@ export async function PUT(request: Request) {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get(COOKIE_NAME)?.value;
-    const session = token ? verifySessionToken(token) : null;
+    const session = token ? await verifySessionToken(token) : null;
 
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

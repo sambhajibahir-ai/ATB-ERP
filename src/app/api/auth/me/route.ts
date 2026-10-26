@@ -12,7 +12,7 @@ export async function GET() {
       return NextResponse.json({ authenticated: false, user: null }, { status: 200 });
     }
 
-    const payload = verifySessionToken(token);
+    const payload = await verifySessionToken(token);
     if (!payload) {
       return NextResponse.json({ authenticated: false, user: null }, { status: 200 });
     }

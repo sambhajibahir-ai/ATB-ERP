@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { cacheLife } from 'next/cache';
 
 const AUTH_SECRET = process.env.AUTH_SECRET || 'atb-software-enterprise-secret-key-2026';
 export const COOKIE_NAME = 'atb_session';
@@ -67,10 +68,16 @@ export function createSessionToken(user: SessionUser, expiresInHours = 24): stri
   return `${header}.${body}.${signature}`;
 }
 
+async function getCachedTimestamp(): Promise<number> {
+  'use cache';
+  cacheLife('hours');
+  return Math.floor(Date.now() / 1000);
+}
+
 /**
  * Verify and Decode Session Token
  */
-export function verifySessionToken(token: string): SessionTokenPayload | null {
+export async function verifySessionToken(token: string): Promise<SessionTokenPayload | null> {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
@@ -84,7 +91,7 @@ export function verifySessionToken(token: string): SessionTokenPayload | null {
     if (signature !== expectedSignature) return null;
 
     const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8')) as SessionTokenPayload;
-    const now = Math.floor(Date.now() / 1000);
+    const now = await getCachedTimestamp();
     if (payload.exp && payload.exp < now) return null;
 
     return payload;
