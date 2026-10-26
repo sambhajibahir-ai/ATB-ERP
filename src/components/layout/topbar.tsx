@@ -13,6 +13,7 @@ import {
   User as UserIcon,
   LogOut,
   Shield,
+  ShieldCheck,
   Key,
   Building2,
   Clock,
@@ -367,6 +368,13 @@ export function Topbar({ onMobileOpen }: TopbarProps) {
               </div>
 
               <div className="py-1">
+                <Link
+                  href="/admin"
+                  className="flex items-center gap-2.5 px-4 py-2 hover:bg-purple-50 dark:hover:bg-purple-950/40 text-purple-700 dark:text-purple-300 font-semibold"
+                >
+                  <ShieldCheck className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                  <span>Admin Console</span>
+                </Link>
                 <Link
                   href="/settings"
                   className="flex items-center gap-2.5 px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200"

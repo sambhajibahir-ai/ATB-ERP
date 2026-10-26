@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import {
   Database,
@@ -508,6 +509,30 @@ export default function SettingsPage() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Admin Console Callout Banner */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-gradient-to-r from-purple-500/10 via-indigo-500/10 to-blue-500/10 border border-purple-200 dark:border-purple-800">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-purple-600 text-white shadow-xs shrink-0">
+            <Shield className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="text-xs font-bold text-slate-900 dark:text-white">
+              Looking for Organization & User Management?
+            </div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400">
+              Visit the dedicated Admin Console for 1-click approvals, company registration, sub-account credentials, and subscription renewals.
+            </div>
+          </div>
+        </div>
+        <Link
+          href="/admin"
+          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-xs transition-colors shrink-0"
+        >
+          <span>Open Admin Console</span>
+          <ChevronRight className="w-3.5 h-3.5" />
+        </Link>
       </div>
 
       {/* Tabs */}

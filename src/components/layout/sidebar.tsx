@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Shield,
+  ShieldCheck,
   Layers,
   X,
   LogOut,
@@ -28,6 +29,7 @@ const navigationItems = [
   { name: 'Finance & Ledger', href: '/finance', icon: IndianRupee },
   { name: 'Operations', href: '/operations', icon: Cog },
   { name: 'Human Resources', href: '/hr', icon: Users },
+  { name: 'Admin Console', href: '/admin', icon: ShieldCheck },
   { name: 'Settings & Neon DB', href: '/settings', icon: Settings },
 ];
 

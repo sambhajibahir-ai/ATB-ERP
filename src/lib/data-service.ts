@@ -30,22 +30,86 @@ import { hashPassword, verifyPassword, verifySessionToken, COOKIE_NAME } from '.
 import { getDb, isNeonConfigured } from '@/db';
 import * as schema from '@/db/schema';
 import { sql } from 'drizzle-orm';
+import fs from 'fs';
+import path from 'path';
 
-// In-Memory resilient store for instant responsiveness
+const DATA_DIR = path.join(process.cwd(), 'data');
+const STORE_FILE = path.join(DATA_DIR, 'store.json');
+
+function loadStoreFromDisk(): Partial<EnterpriseDataStore> | null {
+  try {
+    if (fs.existsSync(STORE_FILE)) {
+      const raw = fs.readFileSync(STORE_FILE, 'utf8');
+      return JSON.parse(raw);
+    }
+  } catch (err) {
+    console.error('[EnterpriseDataStore] Failed to read store from disk:', err);
+  }
+  return null;
+}
+
+// Enterprise Data Store with local file persistence and Neon sync
 class EnterpriseDataStore {
-  companies: Company[] = [...initialCompanies];
-  users: User[] = [...initialUsers];
-  customers: Customer[] = [...initialCustomers];
-  suppliers: Supplier[] = [...initialSuppliers];
-  products: Product[] = [...initialProducts];
-  quotations: Quotation[] = [...initialQuotations];
-  salesOrders: SalesOrder[] = [...initialSalesOrders];
-  invoices: Invoice[] = [...initialInvoices];
-  purchaseOrders: PurchaseOrder[] = [...initialPurchaseOrders];
-  financialTransactions: FinancialTransaction[] = [...initialFinancialTransactions];
-  employees: Employee[] = [...initialEmployees];
-  workOrders: WorkOrder[] = [...initialWorkOrders];
-  auditLogs: AuditLog[] = [...initialAuditLogs];
+  companies: Company[];
+  users: User[];
+  customers: Customer[];
+  suppliers: Supplier[];
+  products: Product[];
+  quotations: Quotation[];
+  salesOrders: SalesOrder[];
+  invoices: Invoice[];
+  purchaseOrders: PurchaseOrder[];
+  financialTransactions: FinancialTransaction[];
+  employees: Employee[];
+  workOrders: WorkOrder[];
+  auditLogs: AuditLog[];
+
+  constructor() {
+    const loaded = loadStoreFromDisk();
+    this.companies = loaded?.companies && Array.isArray(loaded.companies) && loaded.companies.length > 0 ? loaded.companies : [...initialCompanies];
+    this.users = loaded?.users && Array.isArray(loaded.users) && loaded.users.length > 0 ? loaded.users : [...initialUsers];
+    this.customers = loaded?.customers && Array.isArray(loaded.customers) && loaded.customers.length > 0 ? loaded.customers : [...initialCustomers];
+    this.suppliers = loaded?.suppliers && Array.isArray(loaded.suppliers) && loaded.suppliers.length > 0 ? loaded.suppliers : [...initialSuppliers];
+    this.products = loaded?.products && Array.isArray(loaded.products) && loaded.products.length > 0 ? loaded.products : [...initialProducts];
+    this.quotations = loaded?.quotations && Array.isArray(loaded.quotations) && loaded.quotations.length > 0 ? loaded.quotations : [...initialQuotations];
+    this.salesOrders = loaded?.salesOrders && Array.isArray(loaded.salesOrders) && loaded.salesOrders.length > 0 ? loaded.salesOrders : [...initialSalesOrders];
+    this.invoices = loaded?.invoices && Array.isArray(loaded.invoices) && loaded.invoices.length > 0 ? loaded.invoices : [...initialInvoices];
+    this.purchaseOrders = loaded?.purchaseOrders && Array.isArray(loaded.purchaseOrders) && loaded.purchaseOrders.length > 0 ? loaded.purchaseOrders : [...initialPurchaseOrders];
+    this.financialTransactions = loaded?.financialTransactions && Array.isArray(loaded.financialTransactions) && loaded.financialTransactions.length > 0 ? loaded.financialTransactions : [...initialFinancialTransactions];
+    this.employees = loaded?.employees && Array.isArray(loaded.employees) && loaded.employees.length > 0 ? loaded.employees : [...initialEmployees];
+    this.workOrders = loaded?.workOrders && Array.isArray(loaded.workOrders) && loaded.workOrders.length > 0 ? loaded.workOrders : [...initialWorkOrders];
+    this.auditLogs = loaded?.auditLogs && Array.isArray(loaded.auditLogs) && loaded.auditLogs.length > 0 ? loaded.auditLogs : [...initialAuditLogs];
+
+    if (!fs.existsSync(STORE_FILE)) {
+      this.persist();
+    }
+  }
+
+  persist() {
+    try {
+      if (!fs.existsSync(DATA_DIR)) {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+      }
+      const data = {
+        companies: this.companies,
+        users: this.users,
+        customers: this.customers,
+        suppliers: this.suppliers,
+        products: this.products,
+        quotations: this.quotations,
+        salesOrders: this.salesOrders,
+        invoices: this.invoices,
+        purchaseOrders: this.purchaseOrders,
+        financialTransactions: this.financialTransactions,
+        employees: this.employees,
+        workOrders: this.workOrders,
+        auditLogs: this.auditLogs,
+      };
+      fs.writeFileSync(STORE_FILE, JSON.stringify(data, null, 2), 'utf8');
+    } catch (err) {
+      console.error('[EnterpriseDataStore] Failed to write store to disk:', err);
+    }
+  }
 }
 
 const globalStoreKey = Symbol.for('atb_software_erp_store');
@@ -169,8 +233,9 @@ export async function createCompany(data: {
   const days = data.licenseDays || (data.licenseTier === 'Trial' ? 30 : 365);
   const expiry = new Date(now.getTime() + days * 24 * 60 * 60 * 1000).toISOString();
 
+  const nextId = store.companies.reduce((max, c) => Math.max(max, c.id || 0), 0) + 1;
   const newCompany: Company = {
-    id: store.companies.length + 1,
+    id: nextId,
     name: data.name.trim(),
     code,
     email: data.email.trim(),
@@ -188,6 +253,7 @@ export async function createCompany(data: {
   };
 
   store.companies.push(newCompany);
+  store.persist();
   addAuditLog(
     'System',
     'Registered Company',
@@ -207,12 +273,19 @@ export async function approveCompany(companyId: number, approvedBy: string): Pro
   company.approvedBy = approvedBy;
   company.approvedAt = new Date().toISOString();
 
+  // Also activate the primary CEO user if pending
+  const ceoUser = store.users.find((u) => u.companyId === companyId && u.isCompanyAdmin);
+  if (ceoUser) {
+    ceoUser.status = 'Active';
+  }
+
   // If license was expired or near expiry, extend to at least 30 days
   const now = new Date();
   if (new Date(company.licenseExpiresAt).getTime() < now.getTime()) {
     company.licenseExpiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
   }
 
+  store.persist();
   addAuditLog(
     approvedBy,
     'Approved Company Account',
@@ -242,6 +315,7 @@ export async function updateCompanyLicense(
   if (data.maxUsers !== undefined) company.maxUsers = Number(data.maxUsers);
   if (data.status) company.status = data.status;
 
+  store.persist();
   addAuditLog(
     actor,
     'Updated Company License',
@@ -260,13 +334,45 @@ export async function toggleCompanyStatus(companyId: number, actor = 'Platform A
   }
 
   company.status = company.status === 'Active' ? 'Suspended' : 'Active';
+  store.persist();
   addAuditLog(
     actor,
     `${company.status} Company`,
     'Platform Administration',
-    `Toggled company ${company.name} status to ${company.status}`
+    `Set company status for ${company.name} to ${company.status}`
   );
   return { ...company };
+}
+
+export async function deleteCompany(companyId: number, actor = 'Platform Admin'): Promise<boolean> {
+  if (companyId === 1) {
+    throw new Error('Cannot delete the primary platform company');
+  }
+  const idx = store.companies.findIndex((c) => c.id === companyId);
+  if (idx === -1) return false;
+  const deleted = store.companies.splice(idx, 1)[0];
+
+  // Clean up associated tenant records
+  store.users = store.users.filter((u) => u.companyId !== companyId);
+  store.customers = store.customers.filter((c) => c.companyId !== companyId);
+  store.products = store.products.filter((p) => p.companyId !== companyId);
+  store.quotations = store.quotations.filter((q) => q.companyId !== companyId);
+  store.salesOrders = store.salesOrders.filter((s) => s.companyId !== companyId);
+  store.invoices = store.invoices.filter((i) => i.companyId !== companyId);
+  store.purchaseOrders = store.purchaseOrders.filter((p) => p.companyId !== companyId);
+  store.financialTransactions = store.financialTransactions.filter((t) => t.companyId !== companyId);
+  store.employees = store.employees.filter((e) => e.companyId !== companyId);
+  store.workOrders = store.workOrders.filter((w) => w.companyId !== companyId);
+  store.auditLogs = store.auditLogs.filter((l) => l.companyId !== companyId);
+
+  store.persist();
+  addAuditLog(
+    actor,
+    'Deleted Company',
+    'Platform Administration',
+    `Decommissioned company workspace for ${deleted.name} (${deleted.code})`
+  );
+  return true;
 }
 
 // -------------------------------------------------------------
@@ -413,8 +519,9 @@ export async function createUser(data: {
     .toUpperCase()
     .slice(0, 2);
 
+  const nextUserId = store.users.reduce((max, u) => Math.max(max, u.id || 0), 0) + 1;
   const newUser: User = {
-    id: store.users.length + 1,
+    id: nextUserId,
     companyId: targetCompanyId,
     name: data.name,
     email: data.email.toLowerCase(),
@@ -429,6 +536,7 @@ export async function createUser(data: {
   };
 
   store.users.push(newUser);
+  store.persist();
   addAuditLog(
     'Admin',
     'Created User Sub-Account',
@@ -455,6 +563,7 @@ export async function updateUser(
     addAuditLog('Admin', 'Reset User Password', 'Administration', `Reset password credentials for ${user.email}`);
   }
 
+  store.persist();
   addAuditLog('Admin', 'Updated User', 'Administration', `Updated profile/credentials for ${user.email}`);
   const { passwordHash, ...safeUser } = user;
   return safeUser;
@@ -470,6 +579,7 @@ export async function deleteUser(id: number): Promise<boolean> {
   }
 
   const removed = store.users.splice(index, 1)[0];
+  store.persist();
   addAuditLog('Admin', 'Deleted User', 'Administration', `Decommissioned user profile for ${removed.email}`);
   return true;
 }
@@ -529,14 +639,16 @@ export async function getCustomers(companyId?: number): Promise<Customer[]> {
 
 export async function addCustomer(data: Omit<Customer, 'id' | 'createdAt'>): Promise<Customer> {
   const targetCompanyId = data.companyId || (await getEffectiveCompanyId());
+  const nextId = store.customers.reduce((max, c) => Math.max(max, c.id || 0), 0) + 1;
   const newCustomer: Customer = {
     ...data,
     companyId: targetCompanyId,
-    id: store.customers.length + 1,
+    id: nextId,
     createdAt: new Date().toISOString(),
   };
   store.customers.unshift(newCustomer);
-  addAuditLog('User', 'Created Customer', 'Sales & CRM', `Added customer ${newCustomer.name} (${newCustomer.code})`);
+  store.persist();
+  addAuditLog('User', 'Created Customer', 'Sales & CRM', `Added customer ${newCustomer.name} (${newCustomer.code})`, targetCompanyId);
   return newCustomer;
 }
 
@@ -550,14 +662,16 @@ export async function getSuppliers(companyId?: number): Promise<Supplier[]> {
 
 export async function addSupplier(data: Omit<Supplier, 'id' | 'createdAt'>): Promise<Supplier> {
   const targetCompanyId = data.companyId || (await getEffectiveCompanyId());
+  const nextId = store.suppliers.reduce((max, s) => Math.max(max, s.id || 0), 0) + 1;
   const newSupplier: Supplier = {
     ...data,
     companyId: targetCompanyId,
-    id: store.suppliers.length + 1,
+    id: nextId,
     createdAt: new Date().toISOString(),
   };
   store.suppliers.unshift(newSupplier);
-  addAuditLog('User', 'Created Supplier', 'Purchasing', `Added supplier ${newSupplier.name} (${newSupplier.code})`);
+  store.persist();
+  addAuditLog('User', 'Created Supplier', 'Purchasing', `Added supplier ${newSupplier.name} (${newSupplier.code})`, targetCompanyId);
   return newSupplier;
 }
 
@@ -578,15 +692,17 @@ export async function addProduct(data: Omit<Product, 'id' | 'createdAt' | 'statu
       ? 'Low Stock'
       : 'Active';
 
+  const nextId = store.products.reduce((max, p) => Math.max(max, p.id || 0), 0) + 1;
   const newProduct: Product = {
     ...data,
     companyId: targetCompanyId,
     status,
-    id: store.products.length + 1,
+    id: nextId,
     createdAt: new Date().toISOString(),
   };
   store.products.unshift(newProduct);
-  addAuditLog('User', 'Created Product', 'Inventory', `Added product ${newProduct.name} (${newProduct.sku})`);
+  store.persist();
+  addAuditLog('User', 'Created Product', 'Inventory', `Added product ${newProduct.name} (${newProduct.sku})`, targetCompanyId);
   return newProduct;
 }
 
@@ -602,11 +718,13 @@ export async function adjustProductStock(productId: number, quantityChange: numb
       ? 'Low Stock'
       : 'Active';
 
+  store.persist();
   addAuditLog(
     'User',
     'Adjusted Stock',
     'Inventory',
-    `${product.sku}: ${quantityChange > 0 ? '+' : ''}${quantityChange} units (${reason}). New stock: ${product.currentStock}`
+    `${product.sku}: ${quantityChange > 0 ? '+' : ''}${quantityChange} units (${reason}). New stock: ${product.currentStock}`,
+    product.companyId
   );
 
   return product;
@@ -661,8 +779,9 @@ export async function createQuotation(data: {
   const totalAmount = Number((taxableAmount + taxAmount).toFixed(2));
   const validityDays = data.validityDays || 30;
 
+  const nextQuoteId = store.quotations.reduce((max, q) => Math.max(max, q.id || 0), 0) + 1;
   const newQuote: Quotation = {
-    id: store.quotations.length + 1,
+    id: nextQuoteId,
     companyId: targetCompanyId,
     quotationNumber: `QT-2026-${String(store.quotations.length + 45).padStart(4, '0')}`,
     customerId: data.customerId,
@@ -685,12 +804,14 @@ export async function createQuotation(data: {
   };
 
   store.quotations.unshift(newQuote);
+  store.persist();
 
   addAuditLog(
     'User',
     'Created Quotation',
     'Sales & CRM',
-    `Created ${newQuote.quotationNumber} for ${newQuote.customerName} (₹${newQuote.totalAmount.toLocaleString('en-IN')})`
+    `Created ${newQuote.quotationNumber} for ${newQuote.customerName} (₹${newQuote.totalAmount.toLocaleString('en-IN')})`,
+    targetCompanyId
   );
 
   return newQuote;
@@ -703,11 +824,13 @@ export async function updateQuotationStatus(
   const quote = store.quotations.find((q) => q.id === id);
   if (!quote) return null;
   quote.status = status;
+  store.persist();
   addAuditLog(
     'User',
     'Updated Quotation Status',
     'Sales & CRM',
-    `${quote.quotationNumber} status set to ${status}`
+    `${quote.quotationNumber} status set to ${status}`,
+    quote.companyId
   );
   return quote;
 }
@@ -733,12 +856,14 @@ export async function convertQuotationToSalesOrder(
 
   quote.status = 'Converted';
   quote.convertedSalesOrderId = salesOrder.id;
+  store.persist();
 
   addAuditLog(
     'User',
     'Converted Quotation',
     'Sales & CRM',
-    `Converted ${quote.quotationNumber} into ${salesOrder.orderNumber} (₹${salesOrder.totalAmount.toLocaleString('en-IN')})`
+    `Converted ${quote.quotationNumber} into ${salesOrder.orderNumber} (₹${salesOrder.totalAmount.toLocaleString('en-IN')})`,
+    quote.companyId
   );
 
   return { salesOrder, quotation: quote };
@@ -780,8 +905,9 @@ export async function createSalesOrder(data: {
   const taxAmount = Number((subtotal * 0.18).toFixed(2));
   const totalAmount = Number((subtotal + taxAmount).toFixed(2));
 
+  const nextOrderId = store.salesOrders.reduce((max, o) => Math.max(max, o.id || 0), 0) + 1;
   const newOrder: SalesOrder = {
-    id: store.salesOrders.length + 1,
+    id: nextOrderId,
     companyId: targetCompanyId,
     orderNumber: `SO-2026-${String(store.salesOrders.length + 93).padStart(4, '0')}`,
     customerId: data.customerId,
@@ -802,8 +928,9 @@ export async function createSalesOrder(data: {
   store.salesOrders.unshift(newOrder);
 
   // Auto-generate matching Invoice for this company
+  const nextInvoiceId = store.invoices.reduce((max, i) => Math.max(max, i.id || 0), 0) + 1;
   const newInvoice: Invoice = {
-    id: store.invoices.length + 1,
+    id: nextInvoiceId,
     companyId: targetCompanyId,
     invoiceNumber: `INV-2026-${String(store.invoices.length + 49).padStart(4, '0')}`,
     salesOrderId: newOrder.id,
@@ -829,11 +956,14 @@ export async function createSalesOrder(data: {
     adjustProductStock(item.productId, -item.quantity, `Fulfilled Sales Order ${newOrder.orderNumber}`);
   }
 
+  store.persist();
+
   addAuditLog(
     'User',
     'Created Sales Order',
     'Sales & CRM',
-    `Created ${newOrder.orderNumber} for ${newOrder.customerName} (₹${newOrder.totalAmount.toLocaleString('en-IN')})`
+    `Created ${newOrder.orderNumber} for ${newOrder.customerName} (₹${newOrder.totalAmount.toLocaleString('en-IN')})`,
+    targetCompanyId
   );
 
   return newOrder;
@@ -846,7 +976,8 @@ export async function updateSalesOrderStatus(
   const order = store.salesOrders.find((o) => o.id === orderId);
   if (!order) return null;
   order.orderStatus = status;
-  addAuditLog('User', 'Updated Order Status', 'Sales & CRM', `${order.orderNumber} set to ${status}`);
+  store.persist();
+  addAuditLog('User', 'Updated Order Status', 'Sales & CRM', `${order.orderNumber} set to ${status}`, order.companyId);
   return order;
 }
 
@@ -884,8 +1015,9 @@ export async function createPurchaseOrder(data: {
 
   const totalAmount = calculatedItems.reduce((acc, curr) => acc + curr.total, 0);
 
+  const nextPOId = store.purchaseOrders.reduce((max, po) => Math.max(max, po.id || 0), 0) + 1;
   const newPO: PurchaseOrder = {
-    id: store.purchaseOrders.length + 1,
+    id: nextPOId,
     companyId: targetCompanyId,
     poNumber: `PO-2026-${String(store.purchaseOrders.length + 23).padStart(4, '0')}`,
     supplierId: data.supplierId,
@@ -900,11 +1032,13 @@ export async function createPurchaseOrder(data: {
   };
 
   store.purchaseOrders.unshift(newPO);
+  store.persist();
   addAuditLog(
     'User',
     'Created Purchase Order',
     'Purchasing',
-    `Created ${newPO.poNumber} for ${newPO.supplierName} (₹${newPO.totalAmount.toLocaleString('en-IN')}) - Status: Pending Review`
+    `Created ${newPO.poNumber} for ${newPO.supplierName} (₹${newPO.totalAmount.toLocaleString('en-IN')}) - Status: Pending Review`,
+    targetCompanyId
   );
 
   return newPO;
@@ -921,12 +1055,14 @@ export async function approvePurchaseOrder(
   po.approvedBy = reviewer;
   po.approvedAt = new Date().toISOString();
   po.rejectionReason = undefined;
+  store.persist();
 
   addAuditLog(
     reviewer,
     'Approved Purchase Order',
     'Purchasing',
-    `Purchase Order ${po.poNumber} for ${po.supplierName} (₹${po.totalAmount.toLocaleString('en-IN')}) approved and cleared for procurement`
+    `Purchase Order ${po.poNumber} for ${po.supplierName} (₹${po.totalAmount.toLocaleString('en-IN')}) approved and cleared for procurement`,
+    po.companyId
   );
   return po;
 }
@@ -943,12 +1079,14 @@ export async function rejectPurchaseOrder(
   po.approvedBy = reviewer;
   po.approvedAt = new Date().toISOString();
   po.rejectionReason = reason || 'Departmental procurement budget exceeded or re-negotiation required.';
+  store.persist();
 
   addAuditLog(
     reviewer,
     'Rejected Purchase Order',
     'Purchasing',
-    `Purchase Order ${po.poNumber} rejected. Reason: ${po.rejectionReason}`
+    `Purchase Order ${po.poNumber} rejected. Reason: ${po.rejectionReason}`,
+    po.companyId
   );
   return po;
 }
@@ -958,12 +1096,14 @@ export async function transmitPurchaseOrder(poId: number): Promise<PurchaseOrder
   if (!po) return null;
 
   po.status = 'Ordered';
+  store.persist();
 
   addAuditLog(
     'User',
     'Transmitted Purchase Order',
     'Purchasing',
-    `Purchase Order ${po.poNumber} transmitted to vendor ${po.supplierName}. Delivery tracking initiated.`
+    `Purchase Order ${po.poNumber} transmitted to vendor ${po.supplierName}. Delivery tracking initiated.`,
+    po.companyId
   );
   return po;
 }
@@ -975,7 +1115,8 @@ export async function updatePurchaseOrderStatus(
   const po = store.purchaseOrders.find((p) => p.id === poId);
   if (!po) return null;
   po.status = status;
-  addAuditLog('User', 'Updated PO Status', 'Purchasing', `${po.poNumber} status set to ${status}`);
+  store.persist();
+  addAuditLog('User', 'Updated PO Status', 'Purchasing', `${po.poNumber} status set to ${status}`, po.companyId);
   return po;
 }
 
@@ -1001,7 +1142,8 @@ export async function receivePurchaseOrder(poId: number): Promise<PurchaseOrder 
     companyId: po.companyId,
   });
 
-  addAuditLog('User', 'Received Purchase Order', 'Purchasing', `Goods received for ${po.poNumber}. Stock updated.`);
+  store.persist();
+  addAuditLog('User', 'Received Purchase Order', 'Purchasing', `Goods received for ${po.poNumber}. Stock updated.`, po.companyId);
   return po;
 }
 
@@ -1031,7 +1173,8 @@ export async function markInvoicePaid(invoiceId: number): Promise<Invoice | null
     companyId: invoice.companyId,
   });
 
-  addAuditLog('User', 'Marked Invoice Paid', 'Finance & Accounts', `Invoice ${invoice.invoiceNumber} paid in full`);
+  store.persist();
+  addAuditLog('User', 'Marked Invoice Paid', 'Finance & Accounts', `Invoice ${invoice.invoiceNumber} paid in full`, invoice.companyId);
   return invoice;
 }
 
@@ -1050,22 +1193,25 @@ export async function addFinancialTransaction(
   }
 ): Promise<FinancialTransaction> {
   const targetCompanyId = data.companyId || (await getEffectiveCompanyId());
+  const nextTxId = store.financialTransactions.reduce((max, tx) => Math.max(max, tx.id || 0), 0) + 1;
   const newTx: FinancialTransaction = {
     ...data,
     companyId: targetCompanyId,
     status: data.status || 'Completed',
-    id: store.financialTransactions.length + 1,
+    id: nextTxId,
     txNumber: `TX-2026-${String(store.financialTransactions.length + 107).padStart(4, '0')}`,
     date: new Date().toISOString(),
     createdAt: new Date().toISOString(),
   };
 
   store.financialTransactions.unshift(newTx);
+  store.persist();
   addAuditLog(
     'User',
     `Recorded ${newTx.type}`,
     'Finance & Accounts',
-    `${newTx.txNumber}: ₹${newTx.amount.toLocaleString('en-IN')} - ${newTx.category}`
+    `${newTx.txNumber}: ₹${newTx.amount.toLocaleString('en-IN')} - ${newTx.category}`,
+    targetCompanyId
   );
 
   return newTx;
@@ -1081,15 +1227,17 @@ export async function getEmployees(companyId?: number): Promise<Employee[]> {
 
 export async function addEmployee(data: Omit<Employee, 'id' | 'employeeCode' | 'createdAt'>): Promise<Employee> {
   const targetCompanyId = data.companyId || (await getEffectiveCompanyId());
+  const nextEmpId = store.employees.reduce((max, e) => Math.max(max, e.id || 0), 0) + 1;
   const newEmp: Employee = {
     ...data,
     companyId: targetCompanyId,
-    id: store.employees.length + 1,
+    id: nextEmpId,
     employeeCode: `EMP-${String(store.employees.length + 1).padStart(3, '0')}`,
     createdAt: new Date().toISOString(),
   };
   store.employees.unshift(newEmp);
-  addAuditLog('User', 'Added Employee', 'Human Resources', `Onboarded ${newEmp.firstName} ${newEmp.lastName} (${newEmp.department})`);
+  store.persist();
+  addAuditLog('User', 'Added Employee', 'Human Resources', `Onboarded ${newEmp.firstName} ${newEmp.lastName} (${newEmp.department})`, targetCompanyId);
   return newEmp;
 }
 
@@ -1103,14 +1251,16 @@ export async function getWorkOrders(companyId?: number): Promise<WorkOrder[]> {
 
 export async function createWorkOrder(data: Omit<WorkOrder, 'id' | 'createdAt'>): Promise<WorkOrder> {
   const targetCompanyId = data.companyId || (await getEffectiveCompanyId());
+  const nextWOId = store.workOrders.reduce((max, w) => Math.max(max, w.id || 0), 0) + 1;
   const newWO: WorkOrder = {
     ...data,
     companyId: targetCompanyId,
-    id: store.workOrders.length + 1,
+    id: nextWOId,
     createdAt: new Date().toISOString(),
   };
   store.workOrders.unshift(newWO);
-  addAuditLog('User', 'Created Work Order', 'Operations', `Created work order ${newWO.orderNumber} - ${newWO.title}`);
+  store.persist();
+  addAuditLog('User', 'Created Work Order', 'Operations', `Created work order ${newWO.orderNumber} - ${newWO.title}`, targetCompanyId);
   return newWO;
 }
 
@@ -1123,7 +1273,8 @@ export async function updateWorkOrderStatus(
   if (!order) return null;
   order.status = status;
   if (typeof progress === 'number') order.progress = progress;
-  addAuditLog('User', 'Updated Work Order', 'Operations', `${order.orderNumber} status set to ${status}`);
+  store.persist();
+  addAuditLog('User', 'Updated Work Order', 'Operations', `${order.orderNumber} status set to ${status}`, order.companyId);
   return order;
 }
 
@@ -1136,8 +1287,9 @@ export async function getAuditLogs(companyId?: number): Promise<AuditLog[]> {
 }
 
 export function addAuditLog(actor: string, action: string, module: string, details: string, companyId = 1): AuditLog {
+  const nextLogId = store.auditLogs.reduce((max, l) => Math.max(max, l.id || 0), 0) + 1;
   const log: AuditLog = {
-    id: store.auditLogs.length + 1,
+    id: nextLogId,
     companyId,
     actor,
     action,
@@ -1146,6 +1298,7 @@ export function addAuditLog(actor: string, action: string, module: string, detai
     createdAt: new Date().toISOString(),
   };
   store.auditLogs.unshift(log);
+  store.persist();
   return log;
 }
 
