@@ -20,7 +20,26 @@ export async function GET() {
     // Refresh user state from data service if available
     const freshUser = await getUserById(payload.id);
     const companyId = freshUser?.companyId || payload.companyId || 1;
-    const company = await getCompanyById(companyId);
+    let company = await getCompanyById(companyId);
+
+    const isPlatformAdmin = !!(freshUser?.isPlatformAdmin || payload.isPlatformAdmin);
+    if (isPlatformAdmin) {
+      company = company ? { ...company, name: 'ATB Software' } : {
+        id: 1,
+        name: 'ATB Software',
+        code: 'ATB-HQ',
+        email: 'contact@atbsoftware.com',
+        phone: '+91 20 4129 9000',
+        taxId: 'CIN: U72200MH2026PTC******',
+        gstin: '27AABCU****R1Z*',
+        address: 'ATB Towers, Wagholi, Pune, Maharashtra 412207',
+        status: 'Active',
+        licenseTier: 'Enterprise',
+        licenseExpiresAt: '2027-12-31T23:59:59Z',
+        maxUsers: 50,
+        createdAt: '2026-01-01T00:00:00Z',
+      };
+    }
 
     return NextResponse.json({
       authenticated: true,

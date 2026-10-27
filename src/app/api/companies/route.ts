@@ -7,6 +7,8 @@ import {
   createCompany,
   approveCompany,
   updateCompanyLicense,
+  updateCompanyProfile,
+  cancelCompanyLicense,
   toggleCompanyStatus,
   deleteCompany,
   createUser,
@@ -124,19 +126,52 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Only platform admin can approve or modify license parameters of companies
-    if (!session.isPlatformAdmin) {
-      return NextResponse.json(
-        { error: 'Forbidden: Only Platform Super Admins can manage company approvals and licenses.' },
-        { status: 403 }
-      );
-    }
-
     const body = await request.json();
     const { action, companyId } = body;
 
     if (!companyId) {
       return NextResponse.json({ error: 'Company ID is required' }, { status: 400 });
+    }
+
+    // Action 0: Update Company Profile (Accessible by Tenant CEO for their own company, or Super Admin)
+    if (action === 'update_profile') {
+      if (!session.isPlatformAdmin && session.companyId !== Number(companyId)) {
+        return NextResponse.json(
+          { error: 'Forbidden: You can only edit your own company profile.' },
+          { status: 403 }
+        );
+      }
+
+      const updated = await updateCompanyProfile(
+        Number(companyId),
+        {
+          name: body.name,
+          operationsName: body.operationsName,
+          registrationNumber: body.registrationNumber,
+          documentTypeNote: body.documentTypeNote,
+          taxId: body.taxId,
+          gstin: body.gstin,
+          email: body.email,
+          phone: body.phone,
+          address: body.address,
+          currency: body.currency,
+        },
+        session.name
+      );
+
+      return NextResponse.json({
+        success: true,
+        message: `Company profile for ${updated.name} updated successfully!`,
+        company: updated,
+      });
+    }
+
+    // Platform Super Admin Only Actions below (Approvals, License extensions, Tier updates, Suspensions)
+    if (!session.isPlatformAdmin) {
+      return NextResponse.json(
+        { error: 'Forbidden: Only Platform Super Admins can manage company approvals and licenses.' },
+        { status: 403 }
+      );
     }
 
     // Action 1: Approve Company
@@ -195,6 +230,16 @@ export async function PUT(request: Request) {
       return NextResponse.json({
         success: true,
         message: `Company ${updated.name} license parameters updated successfully!`,
+        company: updated,
+      });
+    }
+
+    // Action 5: Cancel / Revoke Company Subscription License
+    if (action === 'cancel_license') {
+      const updated = await cancelCompanyLicense(Number(companyId), session.name);
+      return NextResponse.json({
+        success: true,
+        message: `Subscription license for ${updated.name} has been cancelled! All user logins are now suspended.`,
         company: updated,
       });
     }

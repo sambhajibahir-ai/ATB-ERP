@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server';
-import { getSalesOrders, getCustomers, createSalesOrder, updateSalesOrderStatus } from '@/lib/data-service';
+import {
+  getSalesOrders,
+  getCustomers,
+  createSalesOrder,
+  updateSalesOrderStatus,
+  addCustomer,
+} from '@/lib/data-service';
 
 export async function GET() {
   const [orders, customers] = await Promise.all([getSalesOrders(), getCustomers()]);
@@ -13,6 +19,10 @@ export async function POST(req: Request) {
       const updated = await updateSalesOrderStatus(body.orderId, body.status);
       return NextResponse.json(updated);
     }
+    if (body.action === 'create_customer') {
+      const customer = await addCustomer(body.customer || body);
+      return NextResponse.json(customer, { status: 201 });
+    }
     const order = await createSalesOrder(body);
     return NextResponse.json(order, { status: 201 });
   } catch (error: unknown) {
@@ -20,4 +30,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
 

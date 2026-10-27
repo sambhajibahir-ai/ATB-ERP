@@ -15,6 +15,7 @@ import {
   Edit3,
   Trash2,
   Key,
+  KeyRound,
   RefreshCw,
   Clock,
   X,
@@ -28,11 +29,16 @@ import {
   Eye,
   EyeOff,
   Filter,
+  Sparkles,
+  Copy,
+  Shield,
+  ShieldOff,
+  FileText,
 } from 'lucide-react';
-import { Company, User } from '@/lib/mock-data';
+import { Company, User, AuditLog } from '@/lib/mock-data';
 
 export default function AdminConsolePage() {
-  const [activeTab, setActiveTab] = useState<'companies' | 'users' | 'subscriptions'>('companies');
+  const [activeTab, setActiveTab] = useState<'companies' | 'logins' | 'subscriptions' | 'audit'>('logins');
 
   // Session context
   const [currentSession, setCurrentSession] = useState<{
@@ -82,16 +88,16 @@ export default function AdminConsolePage() {
   const [feedbackError, setFeedbackError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Users Directory state
+  // User Logins Directory state
   const [users, setUsers] = useState<User[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [userSearch, setUserSearch] = useState('');
   const [selectedCompanyFilter, setSelectedCompanyFilter] = useState<string>('all');
-  const [showAddUserModal, setShowAddUserModal] = useState(false);
-  const [showEditUserModal, setShowEditUserModal] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [loginStatusFilter, setLoginStatusFilter] = useState<'ALL' | 'Active' | 'Suspended'>('ALL');
+  const [loginRoleFilter, setLoginRoleFilter] = useState<string>('ALL');
 
-  // Add User Form
+  // Provision Sub-Account Modal
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [newUserName, setNewUserName] = useState('');
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserPassword, setNewUserPassword] = useState('');
@@ -100,11 +106,24 @@ export default function AdminConsolePage() {
   const [newUserTargetCompanyId, setNewUserTargetCompanyId] = useState<number>(1);
   const [showPassword, setShowPassword] = useState(false);
 
-  // Edit User Form
+  // Edit User Profile Modal
+  const [showEditUserModal, setShowEditUserModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [editUserRole, setEditUserRole] = useState<'Admin' | 'Finance' | 'Inventory' | 'Sales' | 'HR' | 'Operations'>('Admin');
   const [editUserDept, setEditUserDept] = useState('');
   const [editUserStatus, setEditUserStatus] = useState<'Active' | 'Suspended'>('Active');
   const [resetUserPassword, setResetUserPassword] = useState('');
+
+  // Quick Reset Password Modal for Super Admin
+  const [showQuickResetModal, setShowQuickResetModal] = useState(false);
+  const [targetUserForReset, setTargetUserForReset] = useState<User | null>(null);
+  const [directNewPassword, setDirectNewPassword] = useState('');
+  const [copiedToClipboard, setCopiedToClipboard] = useState(false);
+
+  // Audit Logs state
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [isLoadingLogs, setIsLoadingLogs] = useState(false);
+  const [auditSearch, setAuditSearch] = useState('');
 
   // Initial Data Fetch
   useEffect(() => {
@@ -119,7 +138,8 @@ export default function AdminConsolePage() {
         setCurrentSession(data.user);
         setNewUserTargetCompanyId(data.user.companyId || 1);
         loadCompanies();
-        loadUsers();
+        loadUsers(data.user.isPlatformAdmin);
+        loadAuditLogs();
       }
     } catch {
       // Fallback
@@ -142,10 +162,11 @@ export default function AdminConsolePage() {
     }
   }
 
-  async function loadUsers() {
+  async function loadUsers(isSuperAdmin = true) {
     try {
       setIsLoadingUsers(true);
-      const res = await fetch('/api/users?companyId=all');
+      const url = isSuperAdmin ? '/api/users?companyId=all' : '/api/users';
+      const res = await fetch(url);
       const data = await res.json();
       if (data?.users) {
         setUsers(data.users);
@@ -155,6 +176,21 @@ export default function AdminConsolePage() {
       setFeedbackError(error.message);
     } finally {
       setIsLoadingUsers(false);
+    }
+  }
+
+  async function loadAuditLogs() {
+    try {
+      setIsLoadingLogs(true);
+      const res = await fetch('/api/admin/audit-logs');
+      const data = await res.json();
+      if (data?.logs) {
+        setAuditLogs(data.logs);
+      }
+    } catch {
+      // Fallback
+    } finally {
+      setIsLoadingLogs(false);
     }
   }
 
@@ -179,7 +215,8 @@ export default function AdminConsolePage() {
 
       setFeedbackSuccess(data.message || 'Company approved successfully!');
       loadCompanies();
-      loadUsers();
+      loadUsers(currentSession?.isPlatformAdmin);
+      loadAuditLogs();
     } catch (err: unknown) {
       const error = err as Error;
       setFeedbackError(error.message);
@@ -202,6 +239,7 @@ export default function AdminConsolePage() {
 
       setFeedbackSuccess(data.message);
       loadCompanies();
+      loadAuditLogs();
     } catch (err: unknown) {
       const error = err as Error;
       setFeedbackError(error.message);
@@ -224,6 +262,7 @@ export default function AdminConsolePage() {
 
       setFeedbackSuccess(data.message);
       loadCompanies();
+      loadAuditLogs();
     } catch (err: unknown) {
       const error = err as Error;
       setFeedbackError(error.message);
@@ -273,7 +312,8 @@ export default function AdminConsolePage() {
       setNewCeoEmail('');
       setNewCeoPassword('');
       loadCompanies();
-      loadUsers();
+      loadUsers(currentSession?.isPlatformAdmin);
+      loadAuditLogs();
     } catch (err: unknown) {
       const error = err as Error;
       setFeedbackError(error.message);
@@ -315,6 +355,7 @@ export default function AdminConsolePage() {
       setFeedbackSuccess(data.message);
       setShowEditLicenseModal(false);
       loadCompanies();
+      loadAuditLogs();
     } catch (err: unknown) {
       const error = err as Error;
       setFeedbackError(error.message);
@@ -326,7 +367,7 @@ export default function AdminConsolePage() {
   async function handleDeleteCompany(companyId: number, companyName: string) {
     if (
       !confirm(
-        `Are you sure you want to permanently decommission ${companyName}? All associated tenant data, users, and transactions will be removed.`
+        `Are you sure you want to permanently decommission ${companyName}? All associated tenant data, user logins, and transactions will be removed.`
       )
     ) {
       return;
@@ -342,7 +383,8 @@ export default function AdminConsolePage() {
 
       setFeedbackSuccess(data.message);
       loadCompanies();
-      loadUsers();
+      loadUsers(currentSession?.isPlatformAdmin);
+      loadAuditLogs();
     } catch (err: unknown) {
       const error = err as Error;
       setFeedbackError(error.message);
@@ -351,7 +393,86 @@ export default function AdminConsolePage() {
     }
   }
 
-  // --- User Sub-Account Actions ---
+  // --- User Logins Management Actions ---
+
+  function openQuickReset(user: User) {
+    setTargetUserForReset(user);
+    const generated = `Pass#${Math.floor(1000 + Math.random() * 9000)}!`;
+    setDirectNewPassword(generated);
+    setCopiedToClipboard(false);
+    setShowQuickResetModal(true);
+  }
+
+  function generateNewRandomPassword() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
+    let res = 'Pass#';
+    for (let i = 0; i < 4; i++) {
+      res += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    res += '!';
+    setDirectNewPassword(res);
+    setCopiedToClipboard(false);
+  }
+
+  async function handleApplyDirectPasswordReset(e: React.FormEvent) {
+    e.preventDefault();
+    if (!targetUserForReset) return;
+    clearAlerts();
+    try {
+      setIsSubmitting(true);
+      const res = await fetch('/api/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: targetUserForReset.id,
+          action: 'reset_password',
+          password: directNewPassword,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to reset password');
+
+      setFeedbackSuccess(
+        `Login credentials reset for ${targetUserForReset.email}! New Password: ${directNewPassword}`
+      );
+      setShowQuickResetModal(false);
+      loadUsers(currentSession?.isPlatformAdmin);
+      loadAuditLogs();
+    } catch (err: unknown) {
+      const error = err as Error;
+      setFeedbackError(error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleToggleUserStatus(userId: number, currentStatus: string, email: string) {
+    clearAlerts();
+    try {
+      setIsSubmitting(true);
+      const res = await fetch('/api/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: userId,
+          action: 'toggle_status',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update user login status');
+
+      setFeedbackSuccess(
+        `Login access for ${email} set to ${currentStatus === 'Active' ? 'Suspended' : 'Active'}`
+      );
+      loadUsers(currentSession?.isPlatformAdmin);
+      loadAuditLogs();
+    } catch (err: unknown) {
+      const error = err as Error;
+      setFeedbackError(error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
   async function handleAddUser(e: React.FormEvent) {
     e.preventDefault();
@@ -371,14 +492,15 @@ export default function AdminConsolePage() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to create sub-account');
+      if (!res.ok) throw new Error(data.error || 'Failed to create login account');
 
-      setFeedbackSuccess(`Sub-account ${data.user.name} (${data.user.email}) successfully provisioned!`);
+      setFeedbackSuccess(`Login account for ${data.user.name} (${data.user.email}) successfully provisioned!`);
       setShowAddUserModal(false);
       setNewUserName('');
       setNewUserEmail('');
       setNewUserPassword('');
-      loadUsers();
+      loadUsers(currentSession?.isPlatformAdmin);
+      loadAuditLogs();
     } catch (err: unknown) {
       const error = err as Error;
       setFeedbackError(error.message);
@@ -416,9 +538,10 @@ export default function AdminConsolePage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to update user profile');
 
-      setFeedbackSuccess(`Credentials and profile for ${data.user.name} updated successfully!`);
+      setFeedbackSuccess(`Profile and login credentials for ${data.user.name} updated successfully!`);
       setShowEditUserModal(false);
-      loadUsers();
+      loadUsers(currentSession?.isPlatformAdmin);
+      loadAuditLogs();
     } catch (err: unknown) {
       const error = err as Error;
       setFeedbackError(error.message);
@@ -427,8 +550,12 @@ export default function AdminConsolePage() {
     }
   }
 
-  async function handleDeleteUser(userId: number, userName: string) {
-    if (!confirm(`Are you sure you want to decommission sub-account ${userName}?`)) {
+  async function handleDeleteUser(userId: number, userName: string, isCeo = false) {
+    const confirmMsg = isCeo
+      ? `WARNING: You are about to permanently DELETE the primary CEO / Admin account for "${userName}"!\n\nAll company data, financial records, and staff logins will remain, but this CEO login will be permanently deleted. Are you sure you want to proceed?`
+      : `Are you sure you want to permanently delete the login credentials for "${userName}"?`;
+
+    if (!confirm(confirmMsg)) {
       return;
     }
     clearAlerts();
@@ -438,10 +565,73 @@ export default function AdminConsolePage() {
         method: 'DELETE',
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to delete sub-account');
+      if (!res.ok) throw new Error(data.error || 'Failed to delete login credentials');
 
       setFeedbackSuccess(data.message);
-      loadUsers();
+      loadUsers(currentSession?.isPlatformAdmin);
+      loadAuditLogs();
+    } catch (err: unknown) {
+      const error = err as Error;
+      setFeedbackError(error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleCancelCompanyLicense(companyId: number, companyName: string) {
+    if (
+      !confirm(
+        `Are you sure you want to CANCEL the subscription license for "${companyName}"?\n\nThis will immediately expire the license, suspend company access, and block all user logins for this organization.`
+      )
+    ) {
+      return;
+    }
+    clearAlerts();
+    try {
+      setIsSubmitting(true);
+      const res = await fetch('/api/companies', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'cancel_license', companyId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to cancel subscription license');
+
+      setFeedbackSuccess(data.message);
+      setShowEditLicenseModal(false);
+      loadCompanies();
+      loadUsers(currentSession?.isPlatformAdmin);
+      loadAuditLogs();
+    } catch (err: unknown) {
+      const error = err as Error;
+      setFeedbackError(error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleCancelUserLicense(userId: number, userName: string, companyName: string, isCeo: boolean) {
+    const confirmMsg = isCeo
+      ? `Are you sure you want to CANCEL the subscription license for CEO "${userName}" (${companyName})?\n\nThis will revoke the organization's enterprise subscription and suspend workspace logins for all users.`
+      : `Are you sure you want to CANCEL the subscription seat license and suspend access for "${userName}" (${companyName})?`;
+
+    if (!confirm(confirmMsg)) return;
+
+    clearAlerts();
+    try {
+      setIsSubmitting(true);
+      const res = await fetch('/api/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: userId, action: 'cancel_license' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to cancel subscription license');
+
+      setFeedbackSuccess(data.message);
+      loadCompanies();
+      loadUsers(currentSession?.isPlatformAdmin);
+      loadAuditLogs();
     } catch (err: unknown) {
       const error = err as Error;
       setFeedbackError(error.message);
@@ -464,7 +654,7 @@ export default function AdminConsolePage() {
     return matchesSearch && matchesStatus;
   });
 
-  // Filtered Users
+  // Filtered Users for Logins Management
   const filteredUsers = users.filter((u) => {
     const matchesSearch =
       u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
@@ -475,17 +665,35 @@ export default function AdminConsolePage() {
     const matchesCompany =
       selectedCompanyFilter === 'all' || u.companyId === Number(selectedCompanyFilter);
 
-    return matchesSearch && matchesCompany;
+    const matchesStatus =
+      loginStatusFilter === 'ALL' || u.status === loginStatusFilter;
+
+    const matchesRole =
+      loginRoleFilter === 'ALL' || u.role === loginRoleFilter;
+
+    return matchesSearch && matchesCompany && matchesStatus && matchesRole;
+  });
+
+  // Filtered Audit Logs
+  const filteredAuditLogs = auditLogs.filter((l) => {
+    if (!auditSearch) return true;
+    const term = auditSearch.toLowerCase();
+    return (
+      l.actor.toLowerCase().includes(term) ||
+      l.action.toLowerCase().includes(term) ||
+      l.details.toLowerCase().includes(term) ||
+      l.module.toLowerCase().includes(term)
+    );
   });
 
   // Stats
   const pendingApprovalsCount = companies.filter((c) => c.status === 'Pending').length;
   const activeCompaniesCount = companies.filter((c) => c.status === 'Active').length;
   const totalUsersCount = users.length;
-  const expiringSoonCount = companies.filter((c) => {
-    const days = Math.ceil((new Date(c.licenseExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-    return days <= 30 && days >= 0;
-  }).length;
+  const activeLoginsCount = users.filter((u) => u.status === 'Active').length;
+  const suspendedLoginsCount = users.filter((u) => u.status === 'Suspended').length;
+
+  const isSuperAdmin = !!currentSession?.isPlatformAdmin;
 
   return (
     <DashboardLayout>
@@ -493,16 +701,23 @@ export default function AdminConsolePage() {
         {/* Top Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="p-2 rounded-xl bg-purple-100 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400">
+            <div className="flex items-center gap-2.5">
+              <span className="p-2.5 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-500/25">
                 <ShieldCheck className="w-6 h-6" />
               </span>
               <div>
-                <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-                  Admin & Multi-Tenant Governance
-                </h1>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Manage organization approvals, company accounts, user credentials, and licensing quotas
+                <div className="flex items-center gap-2">
+                  <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+                    Platform Administration & Security Master
+                  </h1>
+                  {isSuperAdmin && (
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                      Private Super Admin Mode
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Multi-Tenant Company Governance, Private User Login Controls, and Master Credential Auditing
                 </p>
               </div>
             </div>
@@ -512,33 +727,65 @@ export default function AdminConsolePage() {
             <button
               onClick={() => {
                 loadCompanies();
-                loadUsers();
+                loadUsers(isSuperAdmin);
+                loadAuditLogs();
               }}
               className="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
             >
               <RefreshCw className="w-3.5 h-3.5" />
-              Refresh Data
+              Refresh
             </button>
 
-            {currentSession?.isPlatformAdmin && (
+            {isSuperAdmin && (
               <button
                 onClick={() => setShowRegisterModal(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl bg-purple-600 hover:bg-purple-700 text-white shadow-sm shadow-purple-500/25 transition-colors"
+                className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl bg-purple-600 hover:bg-purple-700 text-white shadow-sm shadow-purple-500/25 transition-colors"
               >
                 <Plus className="w-4 h-4" />
-                Register Company
+                Register Organization
               </button>
             )}
 
             <button
               onClick={() => setShowAddUserModal(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-500/25 transition-colors"
+              className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-500/25 transition-colors"
             >
               <Plus className="w-4 h-4" />
-              Provision Sub-Account
+              Provision Login Account
             </button>
           </div>
         </div>
+
+        {/* Private Super Admin Authority Callout Banner */}
+        {isSuperAdmin && (
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-2xl bg-gradient-to-r from-purple-900/30 via-indigo-900/20 to-purple-950/40 border border-purple-500/40 text-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center font-bold shadow-md shadow-purple-500/30 shrink-0">
+                <Shield className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <div className="font-bold text-white flex items-center gap-2">
+                  <span>Private Super Admin Session Active</span>
+                  <span className="font-mono text-[11px] text-purple-300">({currentSession?.email})</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/30 text-purple-200 border border-purple-400/30">
+                    ATB Software
+                  </span>
+                </div>
+                <div className="text-[11px] text-purple-300/80 mt-0.5">
+                  Master authority to manage, suspend, delete, or cancel subscription licenses of any company account (CEO or staff).
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => setActiveTab('logins')}
+                className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-xs transition-colors"
+              >
+                Manage All Logins
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Feedback Alert Banners */}
         {feedbackSuccess && (
@@ -569,8 +816,21 @@ export default function AdminConsolePage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Companies Active</span>
-              <Building2 className="w-4 h-4 text-blue-500" />
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Total User Logins</span>
+              <Users className="w-4 h-4 text-blue-500" />
+            </div>
+            <div className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
+              {totalUsersCount}
+            </div>
+            <div className="mt-1 text-[11px] text-slate-400">
+              {activeLoginsCount} Active • {suspendedLoginsCount} Suspended
+            </div>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Tenant Companies</span>
+              <Building2 className="w-4 h-4 text-purple-500" />
             </div>
             <div className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
               {activeCompaniesCount}
@@ -589,69 +849,56 @@ export default function AdminConsolePage() {
               {pendingApprovalsCount}
             </div>
             <div className="mt-1 text-[11px] text-slate-400">
-              {pendingApprovalsCount > 0 ? 'Requires Platform Admin action' : 'All accounts approved'}
+              {pendingApprovalsCount > 0 ? 'Requires Super Admin verification' : 'All accounts approved'}
             </div>
           </div>
 
           <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">User Sub-Accounts</span>
-              <Users className="w-4 h-4 text-purple-500" />
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Security Audit Logs</span>
+              <FileText className="w-4 h-4 text-indigo-500" />
             </div>
             <div className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
-              {totalUsersCount}
+              {auditLogs.length}
             </div>
             <div className="mt-1 text-[11px] text-slate-400">
-              Across all tenant organizations
-            </div>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">License Expirations</span>
-              <Calendar className="w-4 h-4 text-rose-500" />
-            </div>
-            <div className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
-              {expiringSoonCount}
-            </div>
-            <div className="mt-1 text-[11px] text-slate-400">
-              Expiring within next 30 days
+              Authentication & Security events logged
             </div>
           </div>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
+        <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2 overflow-x-auto whitespace-nowrap">
           <button
-            onClick={() => setActiveTab('companies')}
+            onClick={() => setActiveTab('logins')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all ${
-              activeTab === 'companies'
+              activeTab === 'logins'
                 ? 'bg-purple-600 text-white shadow-sm shadow-purple-500/25'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
+            <Key className="w-4 h-4" />
+            User Logins & Security Master
+            <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+              {filteredUsers.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('companies')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+              activeTab === 'companies'
+                ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/25'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+          >
             <Building2 className="w-4 h-4" />
-            Company Accounts & Approvals
+            Company Organizations & Approvals
             {pendingApprovalsCount > 0 && (
               <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-400 text-slate-950">
                 {pendingApprovalsCount}
               </span>
             )}
-          </button>
-
-          <button
-            onClick={() => setActiveTab('users')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all ${
-              activeTab === 'users'
-                ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/25'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            User Directory & Credentials
-            <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
-              {filteredUsers.length}
-            </span>
           </button>
 
           <button
@@ -665,9 +912,276 @@ export default function AdminConsolePage() {
             <CreditCard className="w-4 h-4" />
             Subscriptions & Licensing
           </button>
+
+          <button
+            onClick={() => setActiveTab('audit')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+              activeTab === 'audit'
+                ? 'bg-slate-800 text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+          >
+            <FileText className="w-4 h-4" />
+            Login & Security Audit Trail
+          </button>
         </div>
 
-        {/* TAB 1: COMPANY ACCOUNTS & APPROVALS */}
+        {/* TAB 1: USER LOGINS & SECURITY MASTER */}
+        {activeTab === 'logins' && (
+          <div className="space-y-4">
+            {/* Filter and Control Bar */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+              <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                {/* Search */}
+                <div className="relative w-full sm:w-64">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by name, email, role..."
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-purple-500/30"
+                  />
+                </div>
+
+                {/* Company filter */}
+                {isSuperAdmin && (
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                    <select
+                      value={selectedCompanyFilter}
+                      onChange={(e) => setSelectedCompanyFilter(e.target.value)}
+                      className="py-2 px-3 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:outline-hidden"
+                    >
+                      <option value="all">All Organizations ({users.length})</option>
+                      {companies.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name} ({users.filter((u) => u.companyId === c.id).length})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Status filter */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-[11px] text-slate-400 font-medium">Status:</span>
+                  {(['ALL', 'Active', 'Suspended'] as const).map((st) => (
+                    <button
+                      key={st}
+                      onClick={() => setLoginStatusFilter(st)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                        loginStatusFilter === st
+                          ? 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300'
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      }`}
+                    >
+                      {st}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowAddUserModal(true)}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl bg-purple-600 hover:bg-purple-700 text-white shadow-xs transition-colors shrink-0"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add User Login
+              </button>
+            </div>
+
+            {/* User Logins Master Table */}
+            <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/75 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
+                      <th className="py-3 px-4">User Login Profile</th>
+                      <th className="py-3 px-4">Account Type & Authority</th>
+                      <th className="py-3 px-4">Assigned Company</th>
+                      <th className="py-3 px-4">Role & Department</th>
+                      <th className="py-3 px-4">Login Status</th>
+                      <th className="py-3 px-4">Last Activity</th>
+                      <th className="py-3 px-4 text-right">Login Security Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                    {filteredUsers.map((user) => {
+                      const userComp = companies.find((c) => c.id === user.companyId);
+                      const isCurrentUser = currentSession?.id === user.id;
+
+                      return (
+                        <tr key={user.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className={`w-8 h-8 rounded-lg text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs ${
+                                  user.isPlatformAdmin
+                                    ? 'bg-gradient-to-tr from-purple-600 to-indigo-600'
+                                    : user.isCompanyAdmin
+                                    ? 'bg-gradient-to-tr from-indigo-600 to-blue-600'
+                                    : 'bg-gradient-to-tr from-blue-600 to-cyan-600'
+                                }`}
+                              >
+                                {user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
+                              </div>
+                              <div>
+                                <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                                  <span>{user.name}</span>
+                                  {isCurrentUser && (
+                                    <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                                      You
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                                  {user.email}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="py-3 px-4">
+                            {user.isPlatformAdmin ? (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                                <Shield className="w-3 h-3 text-purple-600" />
+                                Super Admin (Master)
+                              </span>
+                            ) : user.isCompanyAdmin ? (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                                <Award className="w-3 h-3 text-indigo-600" />
+                                Company CEO / Admin
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                                Staff Account
+                              </span>
+                            )}
+                          </td>
+
+                          <td className="py-3 px-4">
+                            <div className="font-semibold text-slate-800 dark:text-slate-200">
+                              {userComp?.name || `Company #${user.companyId}`}
+                            </div>
+                            <div className="text-[10px] text-slate-400 font-mono">
+                              Code: {userComp?.code || 'CORP'}
+                            </div>
+                          </td>
+
+                          <td className="py-3 px-4">
+                            <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200">
+                              {user.role}
+                            </span>
+                            <div className="text-[11px] text-slate-400 mt-0.5">
+                              {user.department}
+                            </div>
+                          </td>
+
+                          <td className="py-3 px-4">
+                            {user.status === 'Active' ? (
+                              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                Active Login
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-rose-600 dark:text-rose-400">
+                                <span className="w-2 h-2 rounded-full bg-rose-500" />
+                                Suspended / Locked
+                              </span>
+                            )}
+                          </td>
+
+                          <td className="py-3 px-4">
+                            <div className="text-slate-700 dark:text-slate-300">
+                              {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never Logged In'}
+                            </div>
+                            <div className="text-[10px] text-slate-400">
+                              {user.lastLogin ? new Date(user.lastLogin).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Pending activation'}
+                            </div>
+                          </td>
+
+                          <td className="py-3 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {/* Quick Password Reset */}
+                              <button
+                                onClick={() => openQuickReset(user)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/60 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 transition-colors"
+                                title="Reset User Password"
+                              >
+                                <KeyRound className="w-3.5 h-3.5" />
+                                <span>Reset Password</span>
+                              </button>
+
+                              {/* Toggle Status (Lock/Unlock) */}
+                              {!user.isPlatformAdmin && (
+                                <button
+                                  onClick={() => handleToggleUserStatus(user.id, user.status, user.email)}
+                                  disabled={isSubmitting}
+                                  className={`p-1.5 rounded-lg border transition-colors ${
+                                    user.status === 'Active'
+                                      ? 'border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950'
+                                      : 'border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950'
+                                  }`}
+                                  title={user.status === 'Active' ? (user.isCompanyAdmin ? 'Suspend CEO Login Access' : 'Suspend Login Access') : 'Unlock Login Access'}
+                                >
+                                  <Ban className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+
+                              {/* Cancel Subscription License */}
+                              {!user.isPlatformAdmin && (
+                                <button
+                                  onClick={() => handleCancelUserLicense(user.id, user.name, userComp?.name || `Company #${user.companyId}`, !!user.isCompanyAdmin)}
+                                  disabled={isSubmitting}
+                                  className="p-1.5 rounded-lg border border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/60 text-rose-600 dark:text-rose-400 transition-colors"
+                                  title={user.isCompanyAdmin ? "Cancel Company Subscription License" : "Cancel User Seat License"}
+                                >
+                                  <ShieldOff className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+
+                              {/* Edit Profile */}
+                              <button
+                                onClick={() => openEditUser(user)}
+                                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"
+                                title="Edit Role & Details"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* Decommission Account (CEO or any staff) */}
+                              {!user.isPlatformAdmin && (isSuperAdmin || !user.isCompanyAdmin) && (
+                                <button
+                                  onClick={() => handleDeleteUser(user.id, user.name, !!user.isCompanyAdmin)}
+                                  disabled={isSubmitting}
+                                  className="p-1.5 rounded-lg border border-rose-200 dark:border-rose-800 hover:bg-rose-50 dark:hover:bg-rose-950 text-rose-600 dark:text-rose-400 transition-colors"
+                                  title={user.isCompanyAdmin ? "Permanently Delete CEO Account" : "Decommission Login Account"}
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+
+                    {filteredUsers.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="py-8 text-center text-slate-400">
+                          No user logins found matching your filter criteria.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 2: COMPANY ACCOUNTS & APPROVALS */}
         {activeTab === 'companies' && (
           <div className="space-y-4">
             {/* Filter Bar */}
@@ -831,6 +1345,15 @@ export default function AdminConsolePage() {
                               {company.id !== 1 && (
                                 <>
                                   <button
+                                    onClick={() => handleCancelCompanyLicense(company.id, company.name)}
+                                    disabled={isSubmitting}
+                                    className="p-1.5 rounded-lg border border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/60 text-rose-600 dark:text-rose-400 transition-colors"
+                                    title="Cancel & Revoke Subscription License"
+                                  >
+                                    <ShieldOff className="w-3.5 h-3.5" />
+                                  </button>
+
+                                  <button
                                     onClick={() => handleToggleCompanyStatus(company.id)}
                                     disabled={isSubmitting}
                                     className={`p-1.5 rounded-lg border transition-colors ${
@@ -863,165 +1386,6 @@ export default function AdminConsolePage() {
                       <tr>
                         <td colSpan={6} className="py-8 text-center text-slate-400">
                           No company organizations found matching the search criteria.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 2: USER DIRECTORY & SUB-ACCOUNTS */}
-        {activeTab === 'users' && (
-          <div className="space-y-4">
-            {/* Filter Bar */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-              <div className="flex items-center gap-3 w-full sm:w-auto">
-                <div className="relative w-full sm:w-72">
-                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Search users by name, email, role..."
-                    value={userSearch}
-                    onChange={(e) => setUserSearch(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/30"
-                  />
-                </div>
-
-                {/* Company filter dropdown */}
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <Filter className="w-3.5 h-3.5 text-slate-400" />
-                  <select
-                    value={selectedCompanyFilter}
-                    onChange={(e) => setSelectedCompanyFilter(e.target.value)}
-                    className="py-2 px-3 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:outline-hidden"
-                  >
-                    <option value="all">All Companies ({users.length})</option>
-                    {companies.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name} ({users.filter((u) => u.companyId === c.id).length}/{c.maxUsers})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <button
-                onClick={() => setShowAddUserModal(true)}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Add Sub-Account
-              </button>
-            </div>
-
-            {/* Users Table */}
-            <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/75 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
-                      <th className="py-3 px-4">User Profile</th>
-                      <th className="py-3 px-4">Organization</th>
-                      <th className="py-3 px-4">Assigned Role & Dept</th>
-                      <th className="py-3 px-4">Status</th>
-                      <th className="py-3 px-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                    {filteredUsers.map((user) => {
-                      const userComp = companies.find((c) => c.id === user.companyId);
-                      return (
-                        <tr key={user.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
-                          <td className="py-3 px-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
-                                {user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
-                              </div>
-                              <div>
-                                <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                                  <span>{user.name}</span>
-                                  {user.isCompanyAdmin && (
-                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
-                                      Company CEO
-                                    </span>
-                                  )}
-                                  {user.isPlatformAdmin && (
-                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300">
-                                      Super Admin
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                                  {user.email}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-
-                          <td className="py-3 px-4">
-                            <div className="font-semibold text-slate-800 dark:text-slate-200">
-                              {userComp?.name || `Company #${user.companyId}`}
-                            </div>
-                            <div className="text-[10px] text-slate-400 font-mono">
-                              {userComp?.code || 'CORP'}
-                            </div>
-                          </td>
-
-                          <td className="py-3 px-4">
-                            <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300">
-                              {user.role}
-                            </span>
-                            <div className="text-[11px] text-slate-400 mt-0.5">
-                              {user.department}
-                            </div>
-                          </td>
-
-                          <td className="py-3 px-4">
-                            {user.status === 'Active' ? (
-                              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                Active
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-600 dark:text-rose-400">
-                                <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                                Suspended
-                              </span>
-                            )}
-                          </td>
-
-                          <td className="py-3 px-4 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <button
-                                onClick={() => openEditUser(user)}
-                                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"
-                                title="Edit Role / Reset Password"
-                              >
-                                <Edit3 className="w-3.5 h-3.5" />
-                              </button>
-
-                              {!user.isCompanyAdmin && (
-                                <button
-                                  onClick={() => handleDeleteUser(user.id, user.name)}
-                                  className="p-1.5 rounded-lg border border-rose-200 dark:border-rose-800 hover:bg-rose-50 dark:hover:bg-rose-950 text-rose-600 dark:text-rose-400 transition-colors"
-                                  title="Decommission Sub-Account"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-
-                    {filteredUsers.length === 0 && (
-                      <tr>
-                        <td colSpan={5} className="py-8 text-center text-slate-400">
-                          No user sub-accounts found.
                         </td>
                       </tr>
                     )}
@@ -1155,21 +1519,32 @@ export default function AdminConsolePage() {
 
                       {/* Quick 1-click renewal actions */}
                       <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                        <span className="text-[11px] text-slate-400 font-medium">Quick Renew:</span>
-                        <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] text-slate-400 font-medium">Quick Actions:</span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {company.id !== 1 && (
+                            <button
+                              onClick={() => handleCancelCompanyLicense(company.id, company.name)}
+                              disabled={isSubmitting}
+                              className="px-2 py-1 text-xs font-semibold rounded-lg border border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/60 text-rose-600 dark:text-rose-400 transition-colors flex items-center gap-1"
+                              title="Cancel & Revoke Subscription License"
+                            >
+                              <ShieldOff className="w-3 h-3" />
+                              <span>Cancel License</span>
+                            </button>
+                          )}
                           <button
                             onClick={() => handleExtendLicense(company.id, 30)}
                             disabled={isSubmitting}
                             className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors"
                           >
-                            +30 Days
+                            +30d
                           </button>
                           <button
                             onClick={() => handleExtendLicense(company.id, 90)}
                             disabled={isSubmitting}
                             className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-purple-200 dark:border-purple-800 hover:bg-purple-50 dark:hover:bg-purple-950 text-purple-700 dark:text-purple-300 transition-colors"
                           >
-                            +90 Days
+                            +90d
                           </button>
                           <button
                             onClick={() => handleExtendLicense(company.id, 365)}
@@ -1191,6 +1566,170 @@ export default function AdminConsolePage() {
                   );
                 })}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: AUTHENTICATION & LOGIN AUDIT TRAIL */}
+        {activeTab === 'audit' && (
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+              <div className="relative w-full sm:w-80">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Filter audit logs by actor, action, details..."
+                  value={auditSearch}
+                  onChange={(e) => setAuditSearch(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-hidden"
+                />
+              </div>
+
+              <div className="text-xs text-slate-500">
+                Showing {filteredAuditLogs.length} Security & Login Events
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/75 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
+                      <th className="py-3 px-4">Timestamp</th>
+                      <th className="py-3 px-4">Actor</th>
+                      <th className="py-3 px-4">Action Event</th>
+                      <th className="py-3 px-4">Module</th>
+                      <th className="py-3 px-4">Activity Details</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-mono text-[11px]">
+                    {filteredAuditLogs.slice(0, 50).map((log) => (
+                      <tr key={log.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+                        <td className="py-2.5 px-4 text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                          {new Date(log.createdAt).toLocaleString()}
+                        </td>
+                        <td className="py-2.5 px-4 font-semibold text-slate-900 dark:text-white">
+                          {log.actor}
+                        </td>
+                        <td className="py-2.5 px-4">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              log.action.includes('Approved') || log.action.includes('Sign In')
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                                : log.action.includes('Reset') || log.action.includes('Updated')
+                                ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
+                                : log.action.includes('Deleted') || log.action.includes('Suspended')
+                                ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                                : 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                            }`}
+                          >
+                            {log.action}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-4 text-slate-600 dark:text-slate-400">
+                          {log.module}
+                        </td>
+                        <td className="py-2.5 px-4 text-slate-800 dark:text-slate-200">
+                          {log.details}
+                        </td>
+                      </tr>
+                    ))}
+
+                    {filteredAuditLogs.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="py-8 text-center text-slate-400">
+                          No audit activity logs recorded.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL: QUICK RESET USER PASSWORD (SUPER ADMIN) */}
+        {showQuickResetModal && targetUserForReset && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+            <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-6">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 rounded-lg bg-purple-100 dark:bg-purple-950 text-purple-600 dark:text-purple-400">
+                    <KeyRound className="w-4 h-4" />
+                  </span>
+                  <div>
+                    <h3 className="font-bold text-slate-900 dark:text-white">Reset User Password</h3>
+                    <p className="text-xs text-slate-500">{targetUserForReset.name} ({targetUserForReset.email})</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowQuickResetModal(false)} className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleApplyDirectPasswordReset} className="mt-4 space-y-4 text-xs">
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-slate-600 dark:text-slate-400 font-semibold">New Password</label>
+                    <button
+                      type="button"
+                      onClick={generateNewRandomPassword}
+                      className="text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1 text-[11px] font-semibold"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      Generate Strong Password
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      required
+                      value={directNewPassword}
+                      onChange={(e) => setDirectNewPassword(e.target.value)}
+                      className="w-full p-2.5 pr-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-mono text-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(directNewPassword);
+                        setCopiedToClipboard(true);
+                        setTimeout(() => setCopiedToClipboard(false), 2000);
+                      }}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                      title="Copy to Clipboard"
+                    >
+                      {copiedToClipboard ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  {copiedToClipboard && (
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-1 block">
+                      Copied password to clipboard!
+                    </span>
+                  )}
+                </div>
+
+                <div className="p-3 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 text-purple-800 dark:text-purple-300 text-[11px]">
+                  As Super Admin, setting this password will immediately update the PBKDF2 credentials for this account across the system. Share this password with the user.
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setShowQuickResetModal(false)}
+                    className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold shadow-xs"
+                  >
+                    {isSubmitting ? 'Updating...' : 'Set Password'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}
@@ -1378,7 +1917,7 @@ export default function AdminConsolePage() {
                   </div>
 
                   <div>
-                    <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">Temporary Password</label>
+                    <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">Initial Password</label>
                     <input
                       type="password"
                       value={newCeoPassword}
@@ -1478,21 +2017,35 @@ export default function AdminConsolePage() {
                   </select>
                 </div>
 
-                <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                  <button
-                    type="button"
-                    onClick={() => setShowEditLicenseModal(false)}
-                    className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold shadow-xs"
-                  >
-                    {isSubmitting ? 'Saving...' : 'Save Changes'}
-                  </button>
+                <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                  {selectedCompany.id !== 1 ? (
+                    <button
+                      type="button"
+                      onClick={() => handleCancelCompanyLicense(selectedCompany.id, selectedCompany.name)}
+                      disabled={isSubmitting}
+                      className="px-3 py-2 rounded-xl border border-rose-200 dark:border-rose-900/60 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 font-semibold text-xs flex items-center gap-1.5 hover:bg-rose-100 dark:hover:bg-rose-900/60 transition-colors"
+                      title="Cancel and Revoke License"
+                    >
+                      <ShieldOff className="w-3.5 h-3.5" />
+                      <span>Revoke License</span>
+                    </button>
+                  ) : <div />}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowEditLicenseModal(false)}
+                      className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold shadow-xs"
+                    >
+                      {isSubmitting ? 'Saving...' : 'Save Changes'}
+                    </button>
+                  </div>
                 </div>
               </form>
             </div>
@@ -1508,7 +2061,7 @@ export default function AdminConsolePage() {
                   <span className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400">
                     <Users className="w-4 h-4" />
                   </span>
-                  <h3 className="font-bold text-slate-900 dark:text-white">Provision Sub-Account</h3>
+                  <h3 className="font-bold text-slate-900 dark:text-white">Provision User Login Account</h3>
                 </div>
                 <button onClick={() => setShowAddUserModal(false)} className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
                   <X className="w-4 h-4" />
@@ -1516,9 +2069,9 @@ export default function AdminConsolePage() {
               </div>
 
               <form onSubmit={handleAddUser} className="mt-4 space-y-3.5 text-xs">
-                {currentSession?.isPlatformAdmin && (
+                {isSuperAdmin && (
                   <div>
-                    <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">Target Company</label>
+                    <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">Target Organization</label>
                     <select
                       value={newUserTargetCompanyId}
                       onChange={(e) => setNewUserTargetCompanyId(Number(e.target.value))}
@@ -1546,7 +2099,7 @@ export default function AdminConsolePage() {
                 </div>
 
                 <div>
-                  <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">Corporate Email *</label>
+                  <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">Corporate Login Email *</label>
                   <input
                     type="email"
                     required
@@ -1618,9 +2171,9 @@ export default function AdminConsolePage() {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-xs"
+                    className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold shadow-xs"
                   >
-                    {isSubmitting ? 'Provisioning...' : 'Provision Account'}
+                    {isSubmitting ? 'Provisioning...' : 'Provision Login'}
                   </button>
                 </div>
               </form>
@@ -1709,7 +2262,7 @@ export default function AdminConsolePage() {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-xs"
+                    className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold shadow-xs"
                   >
                     {isSubmitting ? 'Updating...' : 'Update Account'}
                   </button>
@@ -1722,4 +2275,3 @@ export default function AdminConsolePage() {
     </DashboardLayout>
   );
 }
-

@@ -57,16 +57,37 @@ export default function PurchasingPage() {
     loadData();
   }, []);
 
+  useEffect(() => {
+    if (suppliers.length > 0) {
+      setSelectedSupplierId((prev) => (suppliers.some((s) => s.id === prev) ? prev : suppliers[0].id));
+    }
+  }, [suppliers]);
+
+  useEffect(() => {
+    if (products.length > 0) {
+      setSelectedProductId((prev) => (products.some((p) => p.id === prev) ? prev : products[0].id));
+    }
+  }, [products]);
+
   async function loadData() {
     try {
       const res = await fetch('/api/purchasing');
       const data = await res.json();
+      const loadedSuppliers: Supplier[] = data.suppliers || [];
       setPurchaseOrders(data.purchaseOrders || []);
-      setSuppliers(data.suppliers || []);
+      setSuppliers(loadedSuppliers);
 
       const prodRes = await fetch('/api/inventory');
       const prodData = await prodRes.json();
-      setProducts(prodData || []);
+      const loadedProducts: Product[] = prodData || [];
+      setProducts(loadedProducts);
+
+      if (loadedSuppliers.length > 0) {
+        setSelectedSupplierId((prev) => (loadedSuppliers.some((s) => s.id === prev) ? prev : loadedSuppliers[0].id));
+      }
+      if (loadedProducts.length > 0) {
+        setSelectedProductId((prev) => (loadedProducts.some((p) => p.id === prev) ? prev : loadedProducts[0].id));
+      }
     } catch (e) {
       console.error(e);
     }
@@ -74,8 +95,18 @@ export default function PurchasingPage() {
 
   async function handleCreatePO(e: React.FormEvent) {
     e.preventDefault();
-    const supplier = suppliers.find((s) => s.id === selectedSupplierId);
-    if (!supplier) return;
+    const activeSupplierId = suppliers.some((s) => s.id === selectedSupplierId) ? selectedSupplierId : (suppliers[0]?.id || 0);
+    const activeProductId = products.some((p) => p.id === selectedProductId) ? selectedProductId : (products[0]?.id || 0);
+    const supplier = suppliers.find((s) => s.id === activeSupplierId);
+    if (!supplier) {
+      alert('Please register an approved supplier first.');
+      return;
+    }
+    const product = products.find((p) => p.id === activeProductId);
+    if (!product) {
+      alert('Please add at least one inventory product SKU before initiating a purchase request.');
+      return;
+    }
 
     try {
       const res = await fetch('/api/purchasing', {
@@ -84,7 +115,7 @@ export default function PurchasingPage() {
         body: JSON.stringify({
           supplierId: supplier.id,
           supplierName: supplier.name,
-          items: [{ productId: selectedProductId, quantity: Number(orderQuantity) }],
+          items: [{ productId: activeProductId, quantity: Number(orderQuantity || 1) }],
           notes: poNotes,
         }),
       });
@@ -188,25 +219,36 @@ export default function PurchasingPage() {
 
   async function handleCreateSupplier(e: React.FormEvent) {
     e.preventDefault();
-    const newSup: Supplier = {
-      id: suppliers.length + 1,
-      code: `SUP-${String(suppliers.length + 1).padStart(3, '0')}`,
-      name: supName,
-      contactPerson: supContact,
-      email: supEmail,
-      phone: '+91 (080) 2839-4411',
-      address: 'Phase II Industrial Area, Bengaluru, Karnataka',
-      paymentTerms: supTerms,
-      rating: 5,
-      status: 'Active',
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      const res = await fetch('/api/suppliers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: supName,
+          contactPerson: supContact,
+          email: supEmail,
+          phone: '+91 (080) 2839-4411',
+          address: 'Phase II Industrial Area, Bengaluru, Karnataka',
+          paymentTerms: supTerms,
+          rating: 5,
+          status: 'Active',
+        }),
+      });
 
-    setSuppliers([newSup, ...suppliers]);
-    setIsSupplierModalOpen(false);
-    setSupName('');
-    setSupContact('');
-    setSupEmail('');
+      if (res.ok) {
+        setIsSupplierModalOpen(false);
+        setSupName('');
+        setSupContact('');
+        setSupEmail('');
+        await loadData();
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Failed to save supplier to database.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error saving supplier to database.');
+    }
   }
 
   // Filter logic
@@ -664,7 +706,7 @@ export default function PurchasingPage() {
               Select Approved Supplier
             </label>
             <select
-              value={selectedSupplierId}
+              value={suppliers.some((s) => s.id === selectedSupplierId) ? selectedSupplierId : (suppliers[0]?.id ?? '')}
               onChange={(e) => setSelectedSupplierId(Number(e.target.value))}
               className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white"
             >
@@ -682,13 +724,13 @@ export default function PurchasingPage() {
                 Item to Reorder / Replenish
               </label>
               <select
-                value={selectedProductId}
+                value={products.some((p) => p.id === selectedProductId) ? selectedProductId : (products[0]?.id ?? '')}
                 onChange={(e) => setSelectedProductId(Number(e.target.value))}
                 className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white"
               >
                 {products.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name} (Unit Cost: ₹{p.costPrice})
+                    {p.name} (Unit Cost: ₹{p.costPrice.toLocaleString('en-IN')})
                   </option>
                 ))}
               </select>
@@ -720,6 +762,47 @@ export default function PurchasingPage() {
               className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-2.5 text-slate-900 dark:text-white"
             />
           </div>
+
+          {/* PO Live Calculation Box */}
+          {(() => {
+            const activeProductId = products.some((p) => p.id === selectedProductId)
+              ? selectedProductId
+              : (products[0]?.id || 0);
+            const prod = products.find((p) => p.id === activeProductId);
+            const unitCost = prod ? Number(prod.costPrice || 0) : 0;
+            const subtotal = unitCost * Number(orderQuantity || 1);
+            const tax = subtotal * 0.18;
+            const grandTotal = subtotal + tax;
+
+            return (
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 text-xs space-y-1">
+                <div className="flex justify-between text-slate-500">
+                  <span>Unit Procurement Cost:</span>
+                  <span className="font-mono font-semibold text-slate-900 dark:text-white">
+                    ₹{unitCost.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className="flex justify-between text-slate-500">
+                  <span>Subtotal ({orderQuantity} units):</span>
+                  <span className="font-mono font-semibold text-slate-900 dark:text-white">
+                    ₹{subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className="flex justify-between text-slate-500">
+                  <span>Input GST Credit (18%):</span>
+                  <span className="font-mono font-semibold text-slate-900 dark:text-white">
+                    ₹{tax.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm font-bold text-blue-600 dark:text-blue-400 pt-1 border-t border-slate-200 dark:border-slate-700">
+                  <span>Estimated Total PO Commitment:</span>
+                  <span className="font-mono">
+                    ₹{grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
 
           <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
             <button

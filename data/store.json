@@ -48,22 +48,77 @@
       "licenseExpiresAt": "2026-11-26T23:59:59Z",
       "maxUsers": 5,
       "createdAt": "2026-10-20T14:30:00Z"
+    },
+    {
+      "id": 4,
+      "name": "Avani Enterprise Ltd",
+      "code": "AVANI-ENTERPRIS",
+      "email": "tukaram.bahir@gmail.com",
+      "phone": "9405541477",
+      "taxId": "",
+      "gstin": "",
+      "address": "Plot no 22 sai balaji green scoiety",
+      "status": "Active",
+      "licenseTier": "Starter",
+      "licenseExpiresAt": "2026-11-25T00:00:00.000Z",
+      "maxUsers": 10,
+      "approvedBy": "Self-Serve Onboarding",
+      "approvedAt": "2026-10-26T15:40:22.360Z",
+      "createdAt": "2026-10-26T15:40:22.360Z"
+    },
+    {
+      "id": 5,
+      "name": "house of ott",
+      "code": "HOUSE-OF-OTT",
+      "email": "abc@gmail.com",
+      "phone": "",
+      "taxId": "",
+      "gstin": "",
+      "address": "",
+      "status": "Active",
+      "licenseTier": "Trial",
+      "licenseExpiresAt": "2026-11-25T16:32:33.135Z",
+      "maxUsers": 10,
+      "approvedBy": "Self-Serve Onboarding",
+      "approvedAt": "2026-10-26T16:32:33.135Z",
+      "createdAt": "2026-10-26T16:32:33.135Z"
+    },
+    {
+      "id": 6,
+      "name": "ATB Software",
+      "code": "ATB-SOFTWARE",
+      "email": "support@atbsoftware.in",
+      "phone": "9185141477",
+      "taxId": "CIN:",
+      "gstin": "27AABCU****R1Z*",
+      "address": "wagholi",
+      "status": "Active",
+      "licenseTier": "Enterprise",
+      "licenseExpiresAt": "2027-10-26T17:12:30.971Z",
+      "maxUsers": 50,
+      "approvedBy": "Platform Super Admin",
+      "approvedAt": "2026-10-26T17:14:23.693Z",
+      "createdAt": "2026-10-26T17:12:30.971Z",
+      "operationsName": "ATB Software",
+      "registrationNumber": "ATB Software",
+      "documentTypeNote": "Official Commercial Price Quotation",
+      "currency": "INR (₹)"
     }
   ],
   "users": [
     {
       "id": 1,
       "companyId": 1,
-      "name": "Aarav Mehta",
-      "email": "aarav.mehta@atbsoftware.com",
-      "passwordHash": "atb_enterprise_salt:810994b9a120f32beacf710b423445cdee1b248281a217953f5a988ecddf30bfeabd15684121214a6b8e11d699b2b1b48e63632ae09b8c6f0ba849f43a3aa9ad",
+      "name": "Platform Super Admin",
+      "email": "atbsoftware@gmail.com",
+      "passwordHash": "atb_superadmin_salt:e51e42d8974bcc910790a05fe2663d5c2f44361a02451786ddd64a20c75add5a2094709361b32640ed013e952c9327f2b458a9202d03eb5f3a2ae5b2e71ee9ce",
       "role": "Admin",
       "department": "Executive Administration",
       "avatar": "AM",
       "status": "Active",
-      "isCompanyAdmin": true,
+      "isCompanyAdmin": false,
       "isPlatformAdmin": true,
-      "lastLogin": "2026-03-19T08:30:00Z",
+      "lastLogin": "2026-10-26T18:16:52.343Z",
       "createdAt": "2026-01-01T00:00:00Z"
     },
     {
@@ -184,9 +239,54 @@
       "isCompanyAdmin": true,
       "isPlatformAdmin": false,
       "createdAt": "2026-10-20T14:30:00Z"
+    },
+    {
+      "id": 101,
+      "companyId": 1,
+      "name": "Aarav Mehta",
+      "email": "aarav.mehta@atbsoftware.com",
+      "passwordHash": "atb_enterprise_salt:810994b9a120f32beacf710b423445cdee1b248281a217953f5a988ecddf30bfeabd15684121214a6b8e11d699b2b1b48e63632ae09b8c6f0ba849f43a3aa9ad",
+      "role": "Admin",
+      "department": "Executive Administration",
+      "avatar": "AM",
+      "status": "Active",
+      "isCompanyAdmin": true,
+      "isPlatformAdmin": false,
+      "lastLogin": "2026-03-19T08:30:00Z",
+      "createdAt": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": 102,
+      "companyId": 6,
+      "name": "Shweta Bahir",
+      "email": "support@abtsoftware.in",
+      "passwordHash": "e9eda19c926336b19283b84a25d15905:14fe733d94847290574ddf2293eba06e13a6fc073632db7d21db858876328b77973fda0a13286bed47ab2e94cbc7dc11b99fdc3fa95257b2a7b940a347eff0f1",
+      "role": "Admin",
+      "department": "Chief Executive Office (CEO)",
+      "avatar": "SB",
+      "status": "Active",
+      "isCompanyAdmin": true,
+      "isPlatformAdmin": false,
+      "createdAt": "2026-10-26T17:12:30.983Z",
+      "lastLogin": "2026-10-26T18:17:39.202Z"
     }
   ],
   "customers": [
+    {
+      "name": "sunil kunjir",
+      "email": "sunil.kunjir@eco-clean.in",
+      "company": "eco clean solutions",
+      "phone": "9888648244",
+      "taxNumber": "27AABCS0000A1Z1",
+      "address": "Manjri",
+      "creditLimit": 50000,
+      "outstandingBalance": 0,
+      "status": "Active",
+      "companyId": 6,
+      "id": 8,
+      "code": "CUST-008",
+      "createdAt": "2026-10-26T18:03:27.992Z"
+    },
     {
       "id": 1,
       "code": "CUST-001",
@@ -331,6 +431,24 @@
   ],
   "products": [
     {
+      "name": "Website Hosting",
+      "sku": "Website hosting",
+      "category": "Networking Solutions",
+      "costPrice": 7000,
+      "sellingPrice": 9000,
+      "currentStock": 7,
+      "minStock": 2,
+      "maxStock": 500,
+      "warehouseLocation": "--",
+      "description": "Standard enterprise component unit.",
+      "unit": "unit",
+      "barcode": "890123456437",
+      "companyId": 6,
+      "status": "Active",
+      "id": 9,
+      "createdAt": "2026-10-26T17:17:23.207Z"
+    },
+    {
       "id": 1,
       "sku": "ELC-SRV-900",
       "name": "ATB HyperCluster Server Node X9",
@@ -339,7 +457,7 @@
       "unit": "unit",
       "costPrice": 4200,
       "sellingPrice": 6850,
-      "currentStock": 18,
+      "currentStock": 17,
       "minStock": 5,
       "maxStock": 50,
       "warehouseLocation": "Zone A - Rack 04",
@@ -470,6 +588,155 @@
     }
   ],
   "quotations": [
+    {
+      "id": 11,
+      "companyId": 6,
+      "quotationNumber": "QT-2026-0055",
+      "customerId": 8,
+      "customerName": "eco clean solutions",
+      "customerEmail": "sunil.kunjir@eco-clean.in",
+      "issueDate": "2026-10-27T01:12:57.258Z",
+      "expiryDate": "2026-11-26T01:12:57.258Z",
+      "subtotal": 9000,
+      "taxRate": 18,
+      "taxAmount": 234,
+      "discountAmount": 7700,
+      "totalAmount": 1534,
+      "status": "Converted",
+      "itemsJson": [
+        {
+          "productId": 9,
+          "productName": "Website Hosting",
+          "sku": "Website hosting",
+          "quantity": 1,
+          "unitPrice": 9000,
+          "total": 9000
+        }
+      ],
+      "terms": "Official price proposal valid for 30 calendar days. Delivery terms: Standard freight. Standard enterprise warranty applies.",
+      "notes": "",
+      "createdAt": "2026-10-27T01:12:57.258Z",
+      "convertedSalesOrderId": 9
+    },
+    {
+      "id": 10,
+      "companyId": 6,
+      "quotationNumber": "QT-2026-0054",
+      "customerId": 8,
+      "customerName": "eco clean solutions",
+      "customerEmail": "sunil.kunjir@eco-clean.in",
+      "issueDate": "2026-10-26T18:18:27.540Z",
+      "expiryDate": "2026-11-25T18:18:27.540Z",
+      "subtotal": 9000,
+      "taxRate": 18,
+      "taxAmount": 234,
+      "discountAmount": 7700,
+      "totalAmount": 1534,
+      "status": "Declined",
+      "itemsJson": [
+        {
+          "productId": 9,
+          "productName": "Website Hosting",
+          "sku": "Website hosting",
+          "quantity": 1,
+          "unitPrice": 9000,
+          "total": 9000
+        }
+      ],
+      "terms": "Official price proposal valid for 30 calendar days. Delivery terms: Standard freight. Standard enterprise warranty applies.",
+      "notes": "",
+      "createdAt": "2026-10-26T18:18:27.540Z"
+    },
+    {
+      "id": 9,
+      "companyId": 6,
+      "quotationNumber": "QT-2026-0053",
+      "customerId": 8,
+      "customerName": "eco clean solutions",
+      "customerEmail": "sunil.kunjir@eco-clean.in",
+      "issueDate": "2026-10-26T18:13:14.163Z",
+      "expiryDate": "2026-11-25T18:13:14.163Z",
+      "subtotal": 9000,
+      "taxRate": 18,
+      "taxAmount": 234,
+      "discountAmount": 7700,
+      "totalAmount": 1534,
+      "status": "Converted",
+      "itemsJson": [
+        {
+          "productId": 9,
+          "productName": "Website Hosting",
+          "sku": "Website hosting",
+          "quantity": 1,
+          "unitPrice": 9000,
+          "total": 9000
+        }
+      ],
+      "terms": "Official price proposal valid for 30 calendar days. Delivery terms: Standard freight. Standard enterprise warranty applies.",
+      "notes": "",
+      "createdAt": "2026-10-26T18:13:14.163Z",
+      "convertedSalesOrderId": 8
+    },
+    {
+      "id": 8,
+      "companyId": 6,
+      "quotationNumber": "QT-2026-0052",
+      "customerId": 8,
+      "customerName": "eco clean solutions",
+      "customerEmail": "sunil.kunjir@eco-clean.in",
+      "issueDate": "2026-10-26T18:04:34.097Z",
+      "expiryDate": "2026-11-25T18:04:34.097Z",
+      "subtotal": 9000,
+      "taxRate": 18,
+      "taxAmount": 234,
+      "discountAmount": 7700,
+      "totalAmount": 1534,
+      "status": "Converted",
+      "itemsJson": [
+        {
+          "productId": 9,
+          "productName": "Website Hosting",
+          "sku": "Website hosting",
+          "quantity": 1,
+          "unitPrice": 9000,
+          "total": 9000
+        }
+      ],
+      "terms": "Official price proposal valid for 30 calendar days. Delivery terms: Standard freight. Standard enterprise warranty applies.",
+      "notes": "",
+      "createdAt": "2026-10-26T18:04:34.097Z",
+      "convertedSalesOrderId": 7
+    },
+    {
+      "id": 7,
+      "companyId": 6,
+      "quotationNumber": "QT-2026-0051",
+      "customerId": 1,
+      "customerName": "eco clean solutions",
+      "customerEmail": "sunil.kunjir@eco-clean.in",
+      "issueDate": "2026-10-26T17:20:30.657Z",
+      "expiryDate": "2026-11-25T17:20:30.657Z",
+      "subtotal": 6850,
+      "taxRate": 18,
+      "taxAmount": 0,
+      "discountAmount": 7500,
+      "totalAmount": 0,
+      "status": "Converted",
+      "itemsJson": [
+        {
+          "productId": 1,
+          "productName": "ATB HyperCluster Server Node X9",
+          "sku": "ELC-SRV-900",
+          "quantity": 1,
+          "unitPrice": 6850,
+          "total": 6850
+        }
+      ],
+      "terms": "Official price proposal valid for 30 calendar days. Delivery terms: Standard freight. Standard enterprise warranty applies.",
+      "notes": "",
+      "createdAt": "2026-10-26T17:20:30.657Z",
+      "convertedSalesOrderId": 6
+    },
     {
       "id": 1,
       "quotationNumber": "QT-2026-0041",
@@ -667,6 +934,114 @@
   ],
   "salesOrders": [
     {
+      "id": 9,
+      "companyId": 6,
+      "orderNumber": "SO-2026-0101",
+      "customerId": 8,
+      "customerName": "eco clean solutions",
+      "orderDate": "2026-10-27T01:17:36.675Z",
+      "deliveryDate": "2026-11-03T01:17:36.676Z",
+      "subtotal": 9000,
+      "discountAmount": 7700,
+      "taxAmount": 234,
+      "totalAmount": 1534,
+      "paymentStatus": "Pending",
+      "orderStatus": "Delivered",
+      "itemsJson": [
+        {
+          "productId": 9,
+          "productName": "Website Hosting",
+          "sku": "Website hosting",
+          "quantity": 1,
+          "unitPrice": 9000,
+          "total": 9000
+        }
+      ],
+      "notes": "Converted from Quotation QT-2026-0055.",
+      "createdAt": "2026-10-27T01:17:36.676Z"
+    },
+    {
+      "id": 8,
+      "companyId": 6,
+      "orderNumber": "SO-2026-0100",
+      "customerId": 8,
+      "customerName": "eco clean solutions",
+      "orderDate": "2026-10-26T18:13:27.332Z",
+      "deliveryDate": "2026-11-02T18:13:27.332Z",
+      "subtotal": 9000,
+      "taxAmount": 1620,
+      "discountAmount": 0,
+      "totalAmount": 10620,
+      "paymentStatus": "Pending",
+      "orderStatus": "Confirmed",
+      "itemsJson": [
+        {
+          "productId": 9,
+          "productName": "Website Hosting",
+          "sku": "Website hosting",
+          "quantity": 1,
+          "unitPrice": 9000,
+          "total": 9000
+        }
+      ],
+      "notes": "Converted from Quotation QT-2026-0053.",
+      "createdAt": "2026-10-26T18:13:27.332Z"
+    },
+    {
+      "id": 7,
+      "companyId": 6,
+      "orderNumber": "SO-2026-0099",
+      "customerId": 8,
+      "customerName": "eco clean solutions",
+      "orderDate": "2026-10-26T18:11:59.144Z",
+      "deliveryDate": "2026-11-02T18:11:59.144Z",
+      "subtotal": 9000,
+      "taxAmount": 1620,
+      "discountAmount": 0,
+      "totalAmount": 10620,
+      "paymentStatus": "Pending",
+      "orderStatus": "Confirmed",
+      "itemsJson": [
+        {
+          "productId": 9,
+          "productName": "Website Hosting",
+          "sku": "Website hosting",
+          "quantity": 1,
+          "unitPrice": 9000,
+          "total": 9000
+        }
+      ],
+      "notes": "Converted from Quotation QT-2026-0052.",
+      "createdAt": "2026-10-26T18:11:59.144Z"
+    },
+    {
+      "id": 6,
+      "companyId": 6,
+      "orderNumber": "SO-2026-0098",
+      "customerId": 1,
+      "customerName": "eco clean solutions",
+      "orderDate": "2026-10-26T18:11:33.641Z",
+      "deliveryDate": "2026-11-02T18:11:33.641Z",
+      "subtotal": 6850,
+      "taxAmount": 1233,
+      "discountAmount": 0,
+      "totalAmount": 8083,
+      "paymentStatus": "Pending",
+      "orderStatus": "Confirmed",
+      "itemsJson": [
+        {
+          "productId": 1,
+          "productName": "ATB HyperCluster Server Node X9",
+          "sku": "ELC-SRV-900",
+          "quantity": 1,
+          "unitPrice": 6850,
+          "total": 6850
+        }
+      ],
+      "notes": "Converted from Quotation QT-2026-0051.",
+      "createdAt": "2026-10-26T18:11:33.641Z"
+    },
+    {
       "id": 1,
       "orderNumber": "SO-2026-0089",
       "customerId": 1,
@@ -815,6 +1190,123 @@
     }
   ],
   "invoices": [
+    {
+      "id": 9,
+      "companyId": 6,
+      "invoiceNumber": "INV-2026-0057",
+      "salesOrderId": 9,
+      "customerId": 8,
+      "customerName": "eco clean solutions",
+      "customerEmail": "sunil.kunjir@eco-clean.in",
+      "issueDate": "2026-10-27T01:17:36.676Z",
+      "dueDate": "2026-11-26T01:17:36.676Z",
+      "subtotal": 9000,
+      "discountAmount": 7700,
+      "taxRate": 18,
+      "taxAmount": 234,
+      "totalAmount": 1534,
+      "amountPaid": 0,
+      "status": "Unpaid",
+      "itemsJson": [
+        {
+          "productId": 9,
+          "productName": "Website Hosting",
+          "sku": "Website hosting",
+          "quantity": 1,
+          "unitPrice": 9000,
+          "total": 9000
+        }
+      ],
+      "terms": "Official price proposal valid for 30 calendar days. Delivery terms: Standard freight. Standard enterprise warranty applies.",
+      "createdAt": "2026-10-27T01:17:36.676Z"
+    },
+    {
+      "id": 8,
+      "companyId": 6,
+      "invoiceNumber": "INV-2026-0056",
+      "salesOrderId": 8,
+      "customerId": 8,
+      "customerName": "eco clean solutions",
+      "customerEmail": "billing@client.com",
+      "issueDate": "2026-10-26T18:13:27.332Z",
+      "dueDate": "2026-11-25T18:13:27.332Z",
+      "subtotal": 9000,
+      "taxRate": 18,
+      "taxAmount": 1620,
+      "totalAmount": 10620,
+      "amountPaid": 0,
+      "status": "Unpaid",
+      "itemsJson": [
+        {
+          "productId": 9,
+          "productName": "Website Hosting",
+          "sku": "Website hosting",
+          "quantity": 1,
+          "unitPrice": 9000,
+          "total": 9000
+        }
+      ],
+      "terms": "Net 30 days. Standard enterprise warranty applies.",
+      "createdAt": "2026-10-26T18:13:27.332Z"
+    },
+    {
+      "id": 7,
+      "companyId": 6,
+      "invoiceNumber": "INV-2026-0055",
+      "salesOrderId": 7,
+      "customerId": 8,
+      "customerName": "eco clean solutions",
+      "customerEmail": "billing@client.com",
+      "issueDate": "2026-10-26T18:11:59.144Z",
+      "dueDate": "2026-11-25T18:11:59.144Z",
+      "subtotal": 9000,
+      "taxRate": 18,
+      "taxAmount": 1620,
+      "totalAmount": 10620,
+      "amountPaid": 0,
+      "status": "Unpaid",
+      "itemsJson": [
+        {
+          "productId": 9,
+          "productName": "Website Hosting",
+          "sku": "Website hosting",
+          "quantity": 1,
+          "unitPrice": 9000,
+          "total": 9000
+        }
+      ],
+      "terms": "Net 30 days. Standard enterprise warranty applies.",
+      "createdAt": "2026-10-26T18:11:59.144Z"
+    },
+    {
+      "id": 6,
+      "companyId": 6,
+      "invoiceNumber": "INV-2026-0054",
+      "salesOrderId": 6,
+      "customerId": 1,
+      "customerName": "eco clean solutions",
+      "customerEmail": "billing@client.com",
+      "issueDate": "2026-10-26T18:11:33.641Z",
+      "dueDate": "2026-11-25T18:11:33.641Z",
+      "subtotal": 6850,
+      "taxRate": 18,
+      "taxAmount": 1233,
+      "totalAmount": 8083,
+      "amountPaid": 8083,
+      "status": "Paid",
+      "itemsJson": [
+        {
+          "productId": 1,
+          "productName": "ATB HyperCluster Server Node X9",
+          "sku": "ELC-SRV-900",
+          "quantity": 1,
+          "unitPrice": 6850,
+          "total": 6850
+        }
+      ],
+      "terms": "Net 30 days. Standard enterprise warranty applies.",
+      "createdAt": "2026-10-26T18:11:33.641Z"
+    },
     {
       "id": 1,
       "invoiceNumber": "INV-2026-0045",
@@ -1104,6 +1596,20 @@
   ],
   "financialTransactions": [
     {
+      "type": "Income",
+      "category": "Product Sales",
+      "amount": 8083,
+      "paymentMethod": "Direct Transfer",
+      "reference": "INV-2026-0054",
+      "description": "Full payment settlement from eco clean solutions",
+      "companyId": 6,
+      "status": "Completed",
+      "id": 8,
+      "txNumber": "TX-2026-0114",
+      "date": "2026-10-26T18:12:37.635Z",
+      "createdAt": "2026-10-26T18:12:37.635Z"
+    },
+    {
       "id": 1,
       "txNumber": "TX-2026-0101",
       "date": "2026-03-01T12:00:00Z",
@@ -1375,6 +1881,546 @@
     }
   ],
   "auditLogs": [
+    {
+      "id": 64,
+      "companyId": 6,
+      "actor": "User",
+      "action": "Updated Order Status",
+      "module": "Sales & CRM",
+      "details": "SO-2026-0101 set to Delivered",
+      "createdAt": "2026-10-27T01:17:53.842Z"
+    },
+    {
+      "id": 63,
+      "companyId": 6,
+      "actor": "User",
+      "action": "Converted Quotation",
+      "module": "Sales & CRM",
+      "details": "Converted QT-2026-0055 into SO-2026-0101 (₹1,534)",
+      "createdAt": "2026-10-27T01:17:36.689Z"
+    },
+    {
+      "id": 62,
+      "companyId": 6,
+      "actor": "User",
+      "action": "Created Sales Order",
+      "module": "Sales & CRM",
+      "details": "Created SO-2026-0101 for eco clean solutions (₹1,534)",
+      "createdAt": "2026-10-27T01:17:36.684Z"
+    },
+    {
+      "id": 61,
+      "companyId": 6,
+      "actor": "User",
+      "action": "Adjusted Stock",
+      "module": "Inventory",
+      "details": "Website hosting: -1 units (Fulfilled Sales Order SO-2026-0101). New stock: 7",
+      "createdAt": "2026-10-27T01:17:36.679Z"
+    },
+    {
+      "id": 60,
+      "companyId": 6,
+      "actor": "User",
+      "action": "Updated Quotation Status",
+      "module": "Sales & CRM",
+      "details": "QT-2026-0055 status set to Accepted",
+      "createdAt": "2026-10-27T01:17:30.900Z"
+    },
+    {
+      "id": 59,
+      "companyId": 6,
+      "actor": "User",
+      "action": "Updated Quotation Status",
+      "module": "Sales & CRM",
+      "details": "QT-2026-0055 status set to Sent",
+      "createdAt": "2026-10-27T01:16:02.674Z"
+    },
+    {
+      "id": 58,
+      "companyId": 6,
+      "actor": "User",
+      "action": "Updated Quotation Status",
+      "module": "Sales & CRM",
+      "details": "QT-2026-0055 status set to Sent",
+      "createdAt": "2026-10-27T01:13:33.096Z"
+    },
+    {
+      "id": 57,
+      "companyId": 6,
+      "actor": "User",
+      "action": "Updated Quotation Status",
+      "module": "Sales & CRM",
+      "details": "QT-2026-0055 status set to Sent",
+      "createdAt": "2026-10-27T01:13:20.305Z"
+    },
+    {
+      "id": 56,
+      "companyId": 6,
+      "actor": "User",
+      "action": "Created Quotation",
+      "module": "Sales & CRM",
+      "details": "Created QT-2026-0055 for eco clean solutions (₹1,534)",
+      "createdAt": "2026-10-27T01:12:57.264Z"
+    },
+    {
+      "id": 55,
+      "companyId": 6,
+      "actor": "Shweta Bahir",
+      "action": "Updated Company Profile",
+      "module": "Settings",
+      "details": "Updated company profile for ATB Software",
+      "createdAt": "2026-10-26T18:33:26.803Z"
+    },
+    {
+      "id": 54,
+      "companyId": 6,
+      "actor": "Shweta Bahir",
+      "action": "Updated Company Profile",
+      "module": "Settings",
+      "details": "Updated company profile for ATB Software",
+      "createdAt": "2026-10-26T18:33:14.577Z"
+    },
+    {
+      "id": 53,
+      "companyId": 6,
+      "actor": "User",
+      "action": "Updated Quotation Status",
+      "module": "Sales & CRM",
+      "details": "QT-2026-0054 status set to Declined",
+      "createdAt": "2026-10-26T18:20:03.084Z"
+    },
+    {
+      "id": 52,
+      "companyId": 6,
+      "actor": "User",
+      "action": "Updated Quotation Status",
+      "module": "Sales & CRM",
+      "details": "QT-2026-0054 status set to Sent",
+      "createdAt": "2026-10-26T18:19:49.260Z"
+    },
+    {
+      "id": 51,
+      "companyId": 6,
+      "actor": "User",
+      "action": "Updated Quotation Status",
+      "module": "Sales & CRM",
+      "details": "QT-2026-0054 status set to Sent",
+      "createdAt": "2026-10-26T18:18:49.558Z"
+    },
+    {
+      "id": 50,
+      "companyId": 6,
+      "actor": "User",
+      "action": "Updated Quotation Status",
+      "module": "Sales & CRM",
+      "details": "QT-2026-0054 status set to Sent",
+      "createdAt": "2026-10-26T18:18:40.887Z"
+    },
+    {
+      "id": 49,
+      "companyId": 6,
+      "actor": "User",
+      "action": "Updated Quotation Status",
+      "module": "Sales & CRM",
+      "details": "QT-2026-0054 status set to Sent",
+      "createdAt": "2026-10-26T18:18:31.691Z"
+    },
+    {
+      "id": 48,
+      "companyId": 6,
+      "actor": "User",
+      "action": "Created Quotation",
+      "module": "Sales & CRM",
+      "details": "Created QT-2026-0054 for eco clean solutions (₹1,534)",
+      "createdAt": "2026-10-26T18:18:27.542Z"
+    },
+    {
+      "id": 47,
+      "companyId": 6,
+      "actor": "Shweta Bahir",
+      "action": "User Sign In",
+      "module": "Authentication",
+      "details": "Successful login for support@abtsoftware.in (ATB Software)",
+      "createdAt": "2026-10-26T18:17:39.202Z"
+    },
+    {
+      "id": 46,
+      "companyId": 1,
+      "actor": "Platform Super Admin",
+      "action": "User Sign In",
+      "module": "Authentication",
+      "details": "Successful login for atbsoftware@gmail.com (ATB Software)",
+      "createdAt": "2026-10-26T18:16:52.344Z"
+    },
+    {
+      "id": 45,
+      "companyId": 6,
+      "actor": "Shweta Bahir",
+      "action": "User Sign In",
+      "module": "Authentication",
+      "details": "Successful login for support@abtsoftware.in (ATB Software)",
+      "createdAt": "2026-10-26T18:16:40.941Z"
+    },
+    {
+      "id": 44,
+      "companyId": 6,
+      "actor": "User",
+      "action": "Converted Quotation",
+      "module": "Sales & CRM",
+      "details": "Converted QT-2026-0053 into SO-2026-0100 (₹10,620)",
+      "createdAt": "2026-10-26T18:13:27.339Z"
+    },
+    {
+      "id": 43,
+      "companyId": 6,
+      "actor": "User",
+      "action": "Created Sales Order",
+      "module": "Sales & CRM",
+      "details": "Created SO-2026-0100 for eco clean solutions (₹10,620)",
+      "createdAt": "2026-10-26T18:13:27.336Z"
+    },
+    {
+      "id": 42,
+      "companyId": 6,
+      "actor": "User",
+      "action": "Adjusted Stock",
+      "module": "Inventory",
+      "details": "Website hosting: -1 units (Fulfilled Sales Order SO-2026-0100). New stock: 8",
+      "createdAt": "2026-10-26T18:13:27.334Z"
+    },
+    {
+      "id": 41,
+      "companyId": 6,
+      "actor": "User",
+      "action": "Created Quotation",
+      "module": "Sales & CRM",
+      "details": "Created QT-2026-0053 for eco clean solutions (₹1,534)",
+      "createdAt": "2026-10-26T18:13:14.166Z"
+    },
+    {
+      "id": 40,
+      "companyId": 6,
+      "actor": "User",
+      "action": "Marked Invoice Paid",
+      "module": "Finance & Accounts",
+      "details": "Invoice INV-2026-0054 paid in full",
+      "createdAt": "2026-10-26T18:12:37.637Z"
+    },
+    {
+      "id": 39,
+      "companyId": 6,
+      "actor": "User",
+      "action": "Recorded Income",
+      "module": "Finance & Accounts",
+      "details": "TX-2026-0114: ₹8,083 - Product Sales",
+      "createdAt": "2026-10-26T18:12:37.636Z"
+    },
+    {
+      "id": 38,
+      "companyId": 6,
+      "actor": "User",
+      "action": "Converted Quotation",
+      "module": "Sales & CRM",
+      "details": "Converted QT-2026-0052 into SO-2026-0099 (₹10,620)",
+      "createdAt": "2026-10-26T18:11:59.148Z"
+    },
+    {
+      "id": 37,
+      "companyId": 6,
+      "actor": "User",
+      "action": "Created Sales Order",
+      "module": "Sales & CRM",
+      "details": "Created SO-2026-0099 for eco clean solutions (₹10,620)",
+      "createdAt": "2026-10-26T18:11:59.146Z"
+    },
+    {
+      "id": 36,
+      "companyId": 6,
+      "actor": "User",
+      "action": "Adjusted Stock",
+      "module": "Inventory",
+      "details": "Website hosting: -1 units (Fulfilled Sales Order SO-2026-0099). New stock: 9",
+      "createdAt": "2026-10-26T18:11:59.145Z"
+    },
+    {
+      "id": 35,
+      "companyId": 6,
+      "actor": "User",
+      "action": "Converted Quotation",
+      "module": "Sales & CRM",
+      "details": "Converted QT-2026-0051 into SO-2026-0098 (₹8,083)",
+      "createdAt": "2026-10-26T18:11:33.646Z"
+    },
+    {
+      "id": 34,
+      "companyId": 6,
+      "actor": "User",
+      "action": "Created Sales Order",
+      "module": "Sales & CRM",
+      "details": "Created SO-2026-0098 for eco clean solutions (₹8,083)",
+      "createdAt": "2026-10-26T18:11:33.644Z"
+    },
+    {
+      "id": 33,
+      "companyId": 1,
+      "actor": "User",
+      "action": "Adjusted Stock",
+      "module": "Inventory",
+      "details": "ELC-SRV-900: -1 units (Fulfilled Sales Order SO-2026-0098). New stock: 17",
+      "createdAt": "2026-10-26T18:11:33.642Z"
+    },
+    {
+      "id": 32,
+      "companyId": 6,
+      "actor": "User",
+      "action": "Updated Quotation Status",
+      "module": "Sales & CRM",
+      "details": "QT-2026-0052 status set to Sent",
+      "createdAt": "2026-10-26T18:04:45.097Z"
+    },
+    {
+      "id": 31,
+      "companyId": 6,
+      "actor": "User",
+      "action": "Created Quotation",
+      "module": "Sales & CRM",
+      "details": "Created QT-2026-0052 for eco clean solutions (₹1,534)",
+      "createdAt": "2026-10-26T18:04:34.098Z"
+    },
+    {
+      "id": 30,
+      "companyId": 6,
+      "actor": "User",
+      "action": "Created Customer",
+      "module": "Sales & CRM",
+      "details": "Added customer sunil kunjir (CUST-008)",
+      "createdAt": "2026-10-26T18:03:27.994Z"
+    },
+    {
+      "id": 29,
+      "companyId": 6,
+      "actor": "User",
+      "action": "Created Quotation",
+      "module": "Sales & CRM",
+      "details": "Created QT-2026-0051 for eco clean solutions (₹0)",
+      "createdAt": "2026-10-26T17:20:30.661Z"
+    },
+    {
+      "id": 28,
+      "companyId": 6,
+      "actor": "User",
+      "action": "Created Product",
+      "module": "Inventory",
+      "details": "Added product Website Hosting (Website hosting)",
+      "createdAt": "2026-10-26T17:17:23.210Z"
+    },
+    {
+      "id": 27,
+      "companyId": 6,
+      "actor": "Shweta Bahir",
+      "action": "User Sign In",
+      "module": "Authentication",
+      "details": "Successful login for support@abtsoftware.in (ATB Software)",
+      "createdAt": "2026-10-26T17:15:10.192Z"
+    },
+    {
+      "id": 26,
+      "companyId": 1,
+      "actor": "Platform Super Admin",
+      "action": "Approved Company Account",
+      "module": "Platform Administration",
+      "details": "Approved company ATB Software (License: Enterprise, Valid until: 26/10/2027)",
+      "createdAt": "2026-10-26T17:14:23.697Z"
+    },
+    {
+      "id": 25,
+      "companyId": 1,
+      "actor": "Platform Super Admin",
+      "action": "User Sign In",
+      "module": "Authentication",
+      "details": "Successful login for atbsoftware@gmail.com (ATB Software)",
+      "createdAt": "2026-10-26T17:14:12.677Z"
+    },
+    {
+      "id": 24,
+      "companyId": 1,
+      "actor": "Admin",
+      "action": "Created User Sub-Account",
+      "module": "User Management",
+      "details": "Created sub-account Shweta Bahir (support@abtsoftware.in) with role Admin for company ATB Software",
+      "createdAt": "2026-10-26T17:12:30.986Z"
+    },
+    {
+      "id": 23,
+      "companyId": 1,
+      "actor": "System",
+      "action": "Registered Company",
+      "module": "Platform Administration",
+      "details": "New tenant company registered: ATB Software (License: Enterprise, Status: Pending)",
+      "createdAt": "2026-10-26T17:12:30.974Z"
+    },
+    {
+      "id": 22,
+      "companyId": 1,
+      "actor": "Platform Super Admin",
+      "action": "User Sign In",
+      "module": "Authentication",
+      "details": "Successful login for atbsoftware@gmail.com (ATB Software)",
+      "createdAt": "2026-10-26T17:07:21.455Z"
+    },
+    {
+      "id": 21,
+      "companyId": 4,
+      "actor": "Platform Super Admin",
+      "action": "Deleted User Account",
+      "module": "Administration",
+      "details": "Permanently deleted Company CEO login for shwetakhude1202@gmail.com (Kabir singh)",
+      "createdAt": "2026-10-26T17:01:18.519Z"
+    },
+    {
+      "id": 20,
+      "companyId": 5,
+      "actor": "Platform Super Admin",
+      "action": "Deleted User Account",
+      "module": "Administration",
+      "details": "Permanently deleted Company CEO login for abc@gmail.com (abc)",
+      "createdAt": "2026-10-26T17:01:13.509Z"
+    },
+    {
+      "id": 19,
+      "companyId": 1,
+      "actor": "Platform Super Admin",
+      "action": "User Sign In",
+      "module": "Authentication",
+      "details": "Successful login for atbsoftware@gmail.com (ATB Software)",
+      "createdAt": "2026-10-26T17:01:04.131Z"
+    },
+    {
+      "id": 18,
+      "companyId": 4,
+      "actor": "Platform Super Admin",
+      "action": "Suspended User Login",
+      "module": "Authentication",
+      "details": "Login access for shwetakhude1202@gmail.com toggled to Suspended",
+      "createdAt": "2026-10-26T16:34:29.800Z"
+    },
+    {
+      "id": 17,
+      "companyId": 5,
+      "actor": "Platform Super Admin",
+      "action": "Suspended User Login",
+      "module": "Authentication",
+      "details": "Login access for abc@gmail.com toggled to Suspended",
+      "createdAt": "2026-10-26T16:33:50.439Z"
+    },
+    {
+      "id": 16,
+      "companyId": 1,
+      "actor": "Platform Super Admin",
+      "action": "User Sign In",
+      "module": "Authentication",
+      "details": "Successful login for atbsoftware@gmail.com (ATB Software Solutions Private Limited)",
+      "createdAt": "2026-10-26T16:33:23.810Z"
+    },
+    {
+      "id": 15,
+      "companyId": 1,
+      "actor": "Admin",
+      "action": "Created User Sub-Account",
+      "module": "User Management",
+      "details": "Created sub-account abc (abc@gmail.com) with role Admin for company house of ott",
+      "createdAt": "2026-10-26T16:32:33.149Z"
+    },
+    {
+      "id": 14,
+      "companyId": 1,
+      "actor": "System",
+      "action": "Registered Company",
+      "module": "Platform Administration",
+      "details": "New tenant company registered: house of ott (License: Trial, Status: Active)",
+      "createdAt": "2026-10-26T16:32:33.138Z"
+    },
+    {
+      "id": 13,
+      "companyId": 1,
+      "actor": "Platform Super Admin",
+      "action": "User Sign In",
+      "module": "Authentication",
+      "details": "Successful login for atbsoftware@gmail.com (ATB Software Solutions Private Limited)",
+      "createdAt": "2026-10-26T16:27:03.466Z"
+    },
+    {
+      "id": 12,
+      "companyId": 1,
+      "actor": "Kabir singh",
+      "action": "User Sign In",
+      "module": "Authentication",
+      "details": "Successful login for shwetakhude1202@gmail.com (Avani Enterprise Ltd)",
+      "createdAt": "2026-10-26T16:14:05.002Z"
+    },
+    {
+      "id": 11,
+      "companyId": 1,
+      "actor": "Kabir singh",
+      "action": "User Sign In",
+      "module": "Authentication",
+      "details": "Successful login for shwetakhude1202@gmail.com (Avani Enterprise Ltd)",
+      "createdAt": "2026-10-26T15:55:54.740Z"
+    },
+    {
+      "id": 10,
+      "companyId": 1,
+      "actor": "Aarav Mehta",
+      "action": "Updated Company License",
+      "module": "Platform Administration",
+      "details": "Updated license for Avani Enterprise Ltd: Tier=Starter, MaxUsers=10, Expires=2026-11-25T00:00:00.000Z",
+      "createdAt": "2026-10-26T15:42:20.926Z"
+    },
+    {
+      "id": 9,
+      "companyId": 1,
+      "actor": "Aarav Mehta",
+      "action": "User Sign In",
+      "module": "Authentication",
+      "details": "Successful login for aarav.mehta@atbsoftware.com (ATB Software Solutions Private Limited)",
+      "createdAt": "2026-10-26T15:42:10.965Z"
+    },
+    {
+      "id": 8,
+      "companyId": 1,
+      "actor": "Admin",
+      "action": "Created User Sub-Account",
+      "module": "User Management",
+      "details": "Created sub-account Kabir singh (shwetakhude1202@gmail.com) with role Admin for company Avani Enterprise Ltd",
+      "createdAt": "2026-10-26T15:40:22.364Z"
+    },
+    {
+      "id": 7,
+      "companyId": 1,
+      "actor": "System",
+      "action": "Registered Company",
+      "module": "Platform Administration",
+      "details": "New tenant company registered: Avani Enterprise Ltd (License: Trial, Status: Active)",
+      "createdAt": "2026-10-26T15:40:22.361Z"
+    },
+    {
+      "id": 6,
+      "companyId": 1,
+      "actor": "Aarav Mehta",
+      "action": "User Sign In",
+      "module": "Authentication",
+      "details": "Successful login for aarav.mehta@atbsoftware.com (ATB Software Solutions Private Limited)",
+      "createdAt": "2026-10-26T15:39:01.825Z"
+    },
+    {
+      "id": 5,
+      "companyId": 1,
+      "actor": "Aarav Mehta",
+      "action": "User Sign In",
+      "module": "Authentication",
+      "details": "Successful login for aarav.mehta@atbsoftware.com (ATB Software Solutions Private Limited)",
+      "createdAt": "2026-10-26T15:37:58.094Z"
+    },
     {
       "id": 1,
       "actor": "Aarav Mehta (CEO)",

@@ -141,7 +141,7 @@ export function Topbar({ onMobileOpen }: TopbarProps) {
           <Building2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
           <span
             className="font-semibold text-slate-800 dark:text-slate-200 max-w-[130px] truncate"
-            title={currentCompany?.name || 'ATB Software Solutions'}
+            title={currentCompany?.name || 'ATB Software'}
           >
             {currentCompany?.name || 'ATB Software'}
           </span>
@@ -345,7 +345,7 @@ export function Topbar({ onMobileOpen }: TopbarProps) {
                 </div>
                 <div className="mt-1 flex items-center gap-1.5 text-[11px] font-medium text-slate-600 dark:text-slate-300 truncate">
                   <Building2 className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                  <span className="truncate">{currentCompany?.name || 'ATB Software Solutions'}</span>
+                  <span className="truncate">{currentCompany?.name || 'ATB Software'}</span>
                 </div>
                 <div className="mt-2 flex items-center gap-1.5 flex-wrap">
                   {currentUser?.isPlatformAdmin ? (

@@ -34,6 +34,9 @@ function DashboardLoadingFallback() {
 
 async function DashboardContent() {
   const metrics = await getDashboardMetrics();
+  const companyName = (metrics.company?.id === 1 || metrics.company?.name?.includes('ATB Software'))
+    ? 'ATB Software'
+    : (metrics.company?.name || 'ATB Software');
 
   return (
     <>
@@ -42,10 +45,10 @@ async function DashboardContent() {
         <div className="relative z-10 max-w-2xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-xs font-semibold text-blue-200 mb-3 border border-white/10">
             <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-            <span>{metrics.company?.name || 'Enterprise Workspace'} • {metrics.company?.licenseTier || 'Enterprise'} Edition</span>
+            <span>{companyName} • {metrics.company?.licenseTier || 'Enterprise'} Edition</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-            {metrics.company?.name || 'Enterprise Command Center'}
+            {companyName}
           </h1>
           <p className="mt-2 text-sm text-blue-100/90 leading-relaxed">
             Multi-tenant company operations are running smoothly. Working capital and inventory levels are healthy,

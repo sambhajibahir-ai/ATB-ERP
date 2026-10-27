@@ -34,6 +34,7 @@ import {
   Calendar,
   Layers,
   ChevronRight,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { AuditLog, User, Company } from '@/lib/mock-data';
 
@@ -114,10 +115,18 @@ export default function SettingsPage() {
 
   // Company Profile State
   const [companyName, setCompanyName] = useState('ATB Software');
-  const [taxId, setTaxId] = useState('ATB-REG-2026-99');
+  const [operationsName, setOperationsName] = useState('ATB Software Enterprise Operations');
+  const [registrationNumber, setRegistrationNumber] = useState('ATB-REG-2026-99');
+  const [documentTypeNote, setDocumentTypeNote] = useState('Official Commercial Price Quotation');
+  const [taxId, setTaxId] = useState('CIN: U72200MH2026PTC******');
+  const [gstin, setGstin] = useState('27AABCU****R1Z*');
+  const [companyEmail, setCompanyEmail] = useState('billing@atbsoftware.com');
+  const [companyPhone, setCompanyPhone] = useState('+91 20 4129 9000');
+  const [companyAddress, setCompanyAddress] = useState('ATB Towers, Wagholi, Pune, Maharashtra 412207');
   const [currency, setCurrency] = useState('INR (₹)');
-  const [fiscalYear, setFiscalYear] = useState('April 1 - March 31');
   const [companySaved, setCompanySaved] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [companySaveError, setCompanySaveError] = useState('');
 
   // Audit Logs
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
@@ -475,14 +484,66 @@ export default function SettingsPage() {
     }
   }
 
-  function handleSaveCompany(e: React.FormEvent) {
-    e.preventDefault();
-    setCompanySaved(true);
-    setTimeout(() => setCompanySaved(false), 2500);
-  }
-
   // Active Company for Tenant
   const myCompany = companies.find((c) => c.id === currentSession?.companyId) || companies[0];
+
+  useEffect(() => {
+    if (myCompany) {
+      setCompanyName(myCompany.name || '');
+      setOperationsName(myCompany.operationsName || `${myCompany.name || 'ATB Software'} Enterprise Operations`);
+      setRegistrationNumber(myCompany.registrationNumber || myCompany.code || 'ATB-REG-2026-99');
+      setDocumentTypeNote(myCompany.documentTypeNote || 'Official Commercial Price Quotation');
+      setTaxId(myCompany.taxId || 'CIN: U72200MH2026PTC******');
+      setGstin(myCompany.gstin || '27AABCU****R1Z*');
+      setCompanyEmail(myCompany.email || 'billing@atbsoftware.com');
+      setCompanyPhone(myCompany.phone || '+91 20 4129 9000');
+      setCompanyAddress(myCompany.address || 'ATB Towers, Wagholi, Pune, Maharashtra 412207');
+      setCurrency(myCompany.currency || 'INR (₹)');
+    }
+  }, [companies, currentSession]);
+
+  async function handleSaveCompany(e: React.FormEvent) {
+    e.preventDefault();
+    if (!myCompany) return;
+    setIsSavingProfile(true);
+    setCompanySaveError('');
+    setCompanySaved(false);
+
+    try {
+      const res = await fetch('/api/companies', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_profile',
+          companyId: myCompany.id,
+          name: companyName,
+          operationsName,
+          registrationNumber,
+          documentTypeNote,
+          taxId,
+          gstin,
+          email: companyEmail,
+          phone: companyPhone,
+          address: companyAddress,
+          currency,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to update company profile');
+      }
+
+      setCompanySaved(true);
+      await fetchCompanies();
+      setTimeout(() => setCompanySaved(false), 3500);
+    } catch (err: unknown) {
+      const error = err as Error;
+      setCompanySaveError(error.message);
+    } finally {
+      setIsSavingProfile(false);
+    }
+  }
 
   return (
     <DashboardLayout>
@@ -1143,64 +1204,219 @@ export default function SettingsPage() {
 
       {/* TAB 2: Company Profile */}
       {activeTab === 'company' && (
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-xs max-w-2xl">
-          <form onSubmit={handleSaveCompany} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Company Legal Name
-              </label>
-              <input
-                type="text"
-                value={companyName}
-                onChange={(e) => setCompanyName(e.target.value)}
-                className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white"
-              />
+        <div className="space-y-6 max-w-4xl">
+          {/* Live Document Header Preview */}
+          <div className="rounded-2xl border border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/50 dark:bg-indigo-950/20 p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <FileSpreadsheet className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <span className="text-xs font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
+                Live Quotation & Commercial Invoice Header Preview
+              </span>
             </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Tax Registration / CIN
-                </label>
-                <input
-                  type="text"
-                  value={taxId}
-                  onChange={(e) => setTaxId(e.target.value)}
-                  className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Default Currency
-                </label>
-                <input
-                  type="text"
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value)}
-                  className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white"
-                />
-              </div>
-            </div>
-
-            <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
-              {companySaved && (
-                <span className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
-                  <Check className="w-4 h-4" />
-                  <span>Company profile saved successfully!</span>
+            <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+              <h2 className="text-lg font-black tracking-tight text-indigo-600 dark:text-indigo-400 flex items-center gap-2">
+                <FileSpreadsheet className="w-5 h-5" />
+                <span>{companyName || 'ATB Software'}</span>
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 space-y-0.5">
+                <span className="block font-medium text-slate-700 dark:text-slate-300">
+                  {operationsName || `${companyName || 'ATB Software'} Enterprise Operations`}
                 </span>
-              )}
-              <div className="ml-auto">
-                <button
-                  type="submit"
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors"
-                >
-                  <Save className="w-3.5 h-3.5" />
-                  <span>Save Profile</span>
-                </button>
-              </div>
+                <span className="block">
+                  Registration: <span className="font-mono font-semibold">{registrationNumber || 'ATB-REG-2026-99'}</span> • {companyEmail || 'billing@atbsoftware.com'}
+                </span>
+                <span className="block text-[11px] text-slate-400">
+                  Document Type: {documentTypeNote || 'Official Commercial Price Quotation'}
+                </span>
+              </p>
             </div>
-          </form>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-xs">
+            <form onSubmit={handleSaveCompany} className="space-y-5">
+              <div className="border-b border-slate-200 dark:border-slate-800 pb-3">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Corporate Document & Quotation Branding
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Configure corporate credentials and identifiers rendered on estimates, quotations, and commercial invoices.
+                </p>
+              </div>
+
+              {companySaveError && (
+                <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-xs text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900">
+                  {companySaveError}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Company Legal Entity Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    placeholder="e.g. ATB Software"
+                    className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white focus:outline-hidden focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Enterprise Operations / Division Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={operationsName}
+                    onChange={(e) => setOperationsName(e.target.value)}
+                    placeholder="e.g. ATB Software Enterprise Operations"
+                    className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white focus:outline-hidden focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Official Registration Number / Code
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={registrationNumber}
+                    onChange={(e) => setRegistrationNumber(e.target.value)}
+                    placeholder="e.g. ATB-REG-2026-99"
+                    className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white font-mono focus:outline-hidden focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Document Type Label / Subtitle
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={documentTypeNote}
+                    onChange={(e) => setDocumentTypeNote(e.target.value)}
+                    placeholder="e.g. Official Commercial Price Quotation"
+                    className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white focus:outline-hidden focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="border-t border-slate-200 dark:border-slate-800 pt-4">
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white mb-3">
+                  Billing, Communication & Tax Information
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Billing & Quotation Contact Email
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={companyEmail}
+                      onChange={(e) => setCompanyEmail(e.target.value)}
+                      placeholder="e.g. billing@atbsoftware.com"
+                      className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white focus:outline-hidden focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Official Contact Phone
+                    </label>
+                    <input
+                      type="text"
+                      value={companyPhone}
+                      onChange={(e) => setCompanyPhone(e.target.value)}
+                      placeholder="e.g. +91 20 4129 9000"
+                      className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white focus:outline-hidden focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      CIN / Corporate Identity Number
+                    </label>
+                    <input
+                      type="text"
+                      value={taxId}
+                      onChange={(e) => setTaxId(e.target.value)}
+                      placeholder="e.g. CIN: U72200MH2026PTC******"
+                      className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white font-mono focus:outline-hidden focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      GSTIN Number
+                    </label>
+                    <input
+                      type="text"
+                      value={gstin}
+                      onChange={(e) => setGstin(e.target.value)}
+                      placeholder="e.g. 27AABCU****R1Z*"
+                      className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white font-mono focus:outline-hidden focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Default Currency
+                    </label>
+                    <input
+                      type="text"
+                      value={currency}
+                      onChange={(e) => setCurrency(e.target.value)}
+                      placeholder="e.g. INR (₹)"
+                      className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white focus:outline-hidden focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Registered Corporate Address
+                  </label>
+                  <input
+                    type="text"
+                    value={companyAddress}
+                    onChange={(e) => setCompanyAddress(e.target.value)}
+                    placeholder="e.g. ATB Towers, Wagholi, Pune, Maharashtra 412207"
+                    className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white focus:outline-hidden focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                {companySaved && (
+                  <span className="text-xs text-emerald-600 font-semibold flex items-center gap-1.5">
+                    <Check className="w-4 h-4" />
+                    <span>Company profile saved & updated across all documents!</span>
+                  </span>
+                )}
+                <div className="ml-auto">
+                  <button
+                    type="submit"
+                    disabled={isSavingProfile}
+                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-md shadow-blue-500/20 disabled:opacity-50"
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    <span>{isSavingProfile ? 'Saving Profile...' : 'Save Profile'}</span>
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 

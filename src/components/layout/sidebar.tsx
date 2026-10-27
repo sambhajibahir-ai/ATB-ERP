@@ -144,7 +144,7 @@ export function Sidebar({
                     {currentCompany?.licenseTier || 'PRO'}
                   </span>
                 </div>
-                <span className="text-[11px] text-slate-400 font-medium truncate max-w-[125px]" title={currentCompany?.name || 'ATB Software Solutions'}>
+                <span className="text-[11px] text-slate-400 font-medium truncate max-w-[125px]" title={currentCompany?.name || 'ATB Software'}>
                   {currentCompany?.name || 'ATB Software'}
                 </span>
               </div>

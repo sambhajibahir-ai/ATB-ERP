@@ -8,6 +8,7 @@ import {
   rejectPurchaseOrder,
   transmitPurchaseOrder,
   updatePurchaseOrderStatus,
+  addSupplier,
 } from '@/lib/data-service';
 
 export async function GET() {
@@ -18,6 +19,11 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+
+    if (body.action === 'create_supplier') {
+      const supplier = await addSupplier(body.supplier || body);
+      return NextResponse.json(supplier, { status: 201 });
+    }
 
     if (body.action === 'approve') {
       const approved = await approvePurchaseOrder(body.poId, body.reviewer);

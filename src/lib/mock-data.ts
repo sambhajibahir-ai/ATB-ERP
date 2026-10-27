@@ -7,6 +7,10 @@ export interface Company {
   taxId?: string;
   gstin?: string;
   address?: string;
+  operationsName?: string;
+  registrationNumber?: string;
+  documentTypeNote?: string;
+  currency?: string;
   status: 'Active' | 'Pending' | 'Suspended' | 'Expired';
   licenseTier: 'Trial' | 'Starter' | 'Growth' | 'Enterprise';
   licenseExpiresAt: string; // ISO date
@@ -161,6 +165,7 @@ export interface Invoice {
   issueDate: string;
   dueDate: string;
   subtotal: number;
+  discountAmount?: number;
   taxRate: number;
   taxAmount: number;
   totalAmount: number;
@@ -249,13 +254,17 @@ export interface AuditLog {
 export const initialCompanies: Company[] = [
   {
     id: 1,
-    name: 'ATB Software Solutions Private Limited',
+    name: 'ATB Software',
     code: 'ATB-HQ',
-    email: 'contact@atbsoftware.com',
-    phone: '+91 80 4129 9000',
-    taxId: 'CIN: U72200KA2026PTC098765',
-    gstin: '29AABCU9603R1Z7',
-    address: 'ATB Tech Towers, Outer Ring Road, Bellandur, Bengaluru, Karnataka 560103',
+    email: 'billing@atbsoftware.com',
+    phone: '+91 20 4129 9000',
+    taxId: 'CIN: U72200MH2026PTC******',
+    gstin: '27AABCU****R1Z*',
+    address: 'ATB Towers, Wagholi, Pune, Maharashtra 412207',
+    operationsName: 'ATB Software Enterprise Operations',
+    registrationNumber: 'ATB-REG-2026-99',
+    documentTypeNote: 'Official Commercial Price Quotation',
+    currency: 'INR (₹)',
     status: 'Active',
     licenseTier: 'Enterprise',
     licenseExpiresAt: '2027-12-31T23:59:59Z',
@@ -1360,7 +1369,25 @@ export const initialAuditLogs: AuditLog[] = [
 ];
 
 export const initialUsers: User[] = [
-  // Company 1: ATB Software Solutions (Super Admin & Company 1 staff)
+  // =========================================================================
+  // Private Platform Super Administrator (Master Control Tower)
+  // =========================================================================
+  {
+    id: 10,
+    companyId: 1,
+    name: 'Platform Super Admin',
+    email: 'atbsoftware@gmail.com',
+    passwordHash: 'atb_superadmin_salt:e51e42d8974bcc910790a05fe2663d5c2f44361a02451786ddd64a20c75add5a2094709361b32640ed013e952c9327f2b458a9202d03eb5f3a2ae5b2e71ee9ce',
+    role: 'Admin',
+    department: 'Platform Governance & Master Security',
+    avatar: 'SA',
+    status: 'Active',
+    isCompanyAdmin: false,
+    isPlatformAdmin: true,
+    lastLogin: '2026-03-20T08:00:00Z',
+    createdAt: '2026-01-01T00:00:00Z',
+  },
+  // Company 1: ATB Software Solutions (Company CEO & staff)
   {
     id: 1,
     companyId: 1,
@@ -1372,7 +1399,7 @@ export const initialUsers: User[] = [
     avatar: 'AM',
     status: 'Active',
     isCompanyAdmin: true,
-    isPlatformAdmin: true,
+    isPlatformAdmin: false,
     lastLogin: '2026-03-19T08:30:00Z',
     createdAt: '2026-01-01T00:00:00Z',
   },

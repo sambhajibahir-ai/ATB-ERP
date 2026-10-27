@@ -40,7 +40,9 @@ function loadStoreFromDisk(): Partial<EnterpriseDataStore> | null {
   try {
     if (fs.existsSync(STORE_FILE)) {
       const raw = fs.readFileSync(STORE_FILE, 'utf8');
-      return JSON.parse(raw);
+      if (raw && raw.trim().length > 0) {
+        return JSON.parse(raw);
+      }
     }
   } catch (err) {
     console.error('[EnterpriseDataStore] Failed to read store from disk:', err);
@@ -80,9 +82,71 @@ class EnterpriseDataStore {
     this.workOrders = loaded?.workOrders && Array.isArray(loaded.workOrders) && loaded.workOrders.length > 0 ? loaded.workOrders : [...initialWorkOrders];
     this.auditLogs = loaded?.auditLogs && Array.isArray(loaded.auditLogs) && loaded.auditLogs.length > 0 ? loaded.auditLogs : [...initialAuditLogs];
 
-    if (!fs.existsSync(STORE_FILE)) {
-      this.persist();
+    // Ensure the dedicated private Super Admin account exists with configured credentials
+    const superAdminEmail = (process.env.SUPERADMIN_EMAIL || 'atbsoftware@gmail.com').toLowerCase();
+    const superAdminPass = process.env.SUPERADMIN_PASSWORD || 'atbsoftware108';
+
+    let superAdmin = this.users.find(
+      (u) => u.isPlatformAdmin || u.email.toLowerCase() === superAdminEmail || u.email.toLowerCase() === 'superadmin@atb-erp.com'
+    );
+
+    if (superAdmin) {
+      superAdmin.email = superAdminEmail;
+      superAdmin.name = 'Platform Super Admin';
+      superAdmin.isPlatformAdmin = true;
+      superAdmin.isCompanyAdmin = false;
+      superAdmin.status = 'Active';
+      if (superAdminPass === 'atbsoftware108') {
+        superAdmin.passwordHash = 'atb_superadmin_salt:e51e42d8974bcc910790a05fe2663d5c2f44361a02451786ddd64a20c75add5a2094709361b32640ed013e952c9327f2b458a9202d03eb5f3a2ae5b2e71ee9ce';
+      } else {
+        superAdmin.passwordHash = hashPassword(superAdminPass);
+      }
+    } else {
+      this.users.unshift({
+        id: 10,
+        companyId: 1,
+        name: 'Platform Super Admin',
+        email: superAdminEmail,
+        passwordHash: 'atb_superadmin_salt:e51e42d8974bcc910790a05fe2663d5c2f44361a02451786ddd64a20c75add5a2094709361b32640ed013e952c9327f2b458a9202d03eb5f3a2ae5b2e71ee9ce',
+        role: 'Admin',
+        department: 'Platform Governance & Master Security',
+        avatar: 'SA',
+        status: 'Active',
+        isCompanyAdmin: false,
+        isPlatformAdmin: true,
+        lastLogin: new Date().toISOString(),
+        createdAt: '2026-01-01T00:00:00Z',
+      });
     }
+
+    // Ensure Aarav Mehta is company CEO, not platform super admin
+    const aarav = this.users.find((u) => u.email.toLowerCase() === 'aarav.mehta@atbsoftware.com');
+    if (aarav) {
+      aarav.isPlatformAdmin = false;
+      aarav.isCompanyAdmin = true;
+    }
+
+    // Ensure Company 1 details are strictly 'ATB Software' with Wagholi address and masked CIN/GSTIN
+    const comp1 = this.companies.find((c) => c.id === 1);
+    if (comp1) {
+      comp1.name = 'ATB Software';
+      comp1.taxId = 'CIN: U72200MH2026PTC******';
+      comp1.gstin = '27AABCU****R1Z*';
+      comp1.address = 'ATB Towers, Wagholi, Pune, Maharashtra 412207';
+      comp1.phone = '+91 20 4129 9000';
+      comp1.email = 'billing@atbsoftware.com';
+      comp1.operationsName = comp1.operationsName || 'ATB Software Enterprise Operations';
+      comp1.registrationNumber = comp1.registrationNumber || 'ATB-REG-2026-99';
+      comp1.documentTypeNote = comp1.documentTypeNote || 'Official Commercial Price Quotation';
+      comp1.currency = comp1.currency || 'INR (₹)';
+    }
+
+    // Ensure all products have explicit companyId
+    for (const prod of this.products) {
+      if (!prod.companyId) prod.companyId = 1;
+    }
+
+    this.persist();
   }
 
   persist() {
@@ -295,6 +359,38 @@ export async function approveCompany(companyId: number, approvedBy: string): Pro
   return { ...company };
 }
 
+export async function updateCompanyProfile(
+  companyId: number,
+  data: Partial<Company>,
+  actor = 'Company Admin'
+): Promise<Company> {
+  const company = store.companies.find((c) => c.id === companyId);
+  if (!company) {
+    throw new Error('Company not found');
+  }
+
+  if (data.name) company.name = data.name;
+  if (data.operationsName !== undefined) company.operationsName = data.operationsName;
+  if (data.registrationNumber !== undefined) company.registrationNumber = data.registrationNumber;
+  if (data.documentTypeNote !== undefined) company.documentTypeNote = data.documentTypeNote;
+  if (data.taxId !== undefined) company.taxId = data.taxId;
+  if (data.gstin !== undefined) company.gstin = data.gstin;
+  if (data.email !== undefined) company.email = data.email;
+  if (data.phone !== undefined) company.phone = data.phone;
+  if (data.address !== undefined) company.address = data.address;
+  if (data.currency !== undefined) company.currency = data.currency;
+
+  store.persist();
+  addAuditLog(
+    actor,
+    'Updated Company Profile',
+    'Settings',
+    `Updated company profile for ${company.name}`,
+    company.id
+  );
+  return { ...company };
+}
+
 export async function updateCompanyLicense(
   companyId: number,
   data: {
@@ -344,6 +440,27 @@ export async function toggleCompanyStatus(companyId: number, actor = 'Platform A
   return { ...company };
 }
 
+export async function cancelCompanyLicense(companyId: number, actor = 'Platform Super Admin'): Promise<Company> {
+  const company = store.companies.find((c) => c.id === companyId);
+  if (!company) throw new Error('Company not found');
+
+  // Immediately expire license and suspend company access
+  const pastDate = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  company.licenseExpiresAt = pastDate;
+  company.status = 'Suspended';
+  store.persist();
+
+  addAuditLog(
+    actor,
+    'Cancelled Subscription License',
+    'Platform Administration',
+    `Cancelled and revoked subscription license for ${company.name}. License expired and workspace suspended.`,
+    companyId
+  );
+
+  return { ...company };
+}
+
 export async function deleteCompany(companyId: number, actor = 'Platform Admin'): Promise<boolean> {
   if (companyId === 1) {
     throw new Error('Cannot delete the primary platform company');
@@ -388,7 +505,11 @@ export async function getDashboardMetrics(companyId?: number) {
   const companyInvoices = store.invoices.filter((inv) => (inv.companyId || 1) === targetId);
   const companyQuotations = store.quotations.filter((q) => (q.companyId || 1) === targetId);
   const companyLogs = store.auditLogs.filter((al) => (al.companyId || 1) === targetId);
-  const company = store.companies.find((c) => c.id === targetId) || store.companies[0];
+  const rawCompany = store.companies.find((c) => c.id === targetId) || store.companies[0];
+  const company = rawCompany ? {
+    ...rawCompany,
+    name: (rawCompany.id === 1 || rawCompany.name?.includes('ATB Software')) ? 'ATB Software' : rawCompany.name,
+  } : null;
 
   const totalRevenue = companyTxs
     .filter((tx) => tx.type === 'Income' && tx.status === 'Completed')
@@ -569,19 +690,72 @@ export async function updateUser(
   return safeUser;
 }
 
-export async function deleteUser(id: number): Promise<boolean> {
+export async function deleteUser(id: number, isPlatformAdmin = false): Promise<boolean> {
   const index = store.users.findIndex((u) => u.id === id);
   if (index === -1) return false;
   const user = store.users[index];
 
-  if (user.isCompanyAdmin) {
-    throw new Error('Cannot delete the primary CEO / Admin account of a company.');
+  if (user.isPlatformAdmin) {
+    throw new Error('Cannot delete the private platform Super Administrator account.');
+  }
+
+  if (user.isCompanyAdmin && !isPlatformAdmin) {
+    throw new Error('Cannot delete a company CEO account without Platform Super Admin privileges.');
   }
 
   const removed = store.users.splice(index, 1)[0];
   store.persist();
-  addAuditLog('Admin', 'Deleted User', 'Administration', `Decommissioned user profile for ${removed.email}`);
+  addAuditLog(
+    isPlatformAdmin ? 'Platform Super Admin' : 'Admin',
+    'Deleted User Account',
+    'Administration',
+    `Permanently deleted ${removed.isCompanyAdmin ? 'Company CEO' : 'Staff'} login for ${removed.email} (${removed.name})`,
+    removed.companyId
+  );
   return true;
+}
+
+export async function resetUserPassword(
+  userId: number,
+  newPassword: string,
+  actor = 'Platform Super Admin'
+): Promise<boolean> {
+  const user = store.users.find((u) => u.id === userId);
+  if (!user) return false;
+
+  user.passwordHash = hashPassword(newPassword);
+  store.persist();
+  addAuditLog(
+    actor,
+    'Reset User Password',
+    'Authentication',
+    `Credentials reset for login: ${user.email} (${user.name})`,
+    user.companyId
+  );
+  return true;
+}
+
+export async function toggleUserStatus(
+  userId: number,
+  actor = 'Platform Super Admin'
+): Promise<Omit<User, 'passwordHash'>> {
+  const user = store.users.find((u) => u.id === userId);
+  if (!user) throw new Error('User not found');
+  if (user.isPlatformAdmin) {
+    throw new Error('Cannot suspend the master platform Super Administrator account.');
+  }
+
+  user.status = user.status === 'Active' ? 'Suspended' : 'Active';
+  store.persist();
+  addAuditLog(
+    actor,
+    `${user.status} User Login`,
+    'Authentication',
+    `Login access for ${user.email} toggled to ${user.status}`,
+    user.companyId
+  );
+  const { passwordHash, ...safeUser } = user;
+  return safeUser;
 }
 
 export async function authenticateUser(
@@ -603,30 +777,37 @@ export async function authenticateUser(
     throw new Error('Your company organization could not be found');
   }
 
-  // Check company status & approval
-  if (company.status === 'Pending') {
-    throw new Error(
-      `Your company account (${company.name}) is currently pending approval by the Platform Administrator. Please contact support or await verification.`
-    );
-  }
+  // Check company status & approval (Platform Super Admin bypasses company restrictions to maintain platform)
+  if (!user.isPlatformAdmin) {
+    if (company.status === 'Pending') {
+      throw new Error(
+        `Your company account (${company.name}) is currently pending approval by the Platform Administrator. Please contact support or await verification.`
+      );
+    }
 
-  if (company.status === 'Suspended') {
-    throw new Error(
-      `Your company account (${company.name}) has been suspended. Please contact the platform administrator.`
-    );
-  }
+    if (company.status === 'Suspended') {
+      throw new Error(
+        `Your company account (${company.name}) has been suspended or its subscription license has been cancelled. Please contact the platform administrator.`
+      );
+    }
 
-  // Check license expiry
-  if (new Date(company.licenseExpiresAt).getTime() < Date.now()) {
-    throw new Error(
-      `Your company enterprise license expired on ${new Date(company.licenseExpiresAt).toLocaleDateString()}. Please contact your CEO or administrator to renew.`
-    );
+    // Check license expiry
+    if (new Date(company.licenseExpiresAt).getTime() < Date.now()) {
+      throw new Error(
+        `Your company enterprise license expired on ${new Date(company.licenseExpiresAt).toLocaleDateString()}. Please contact your CEO or platform administrator to renew.`
+      );
+    }
   }
 
   user.lastLogin = new Date().toISOString();
-  addAuditLog(user.name, 'User Sign In', 'Authentication', `Successful login for ${user.email} (${company.name})`);
+  const effectiveCompany = user.isPlatformAdmin ? { ...company, name: 'ATB Software' } : company;
+  addAuditLog(user.name, 'User Sign In', 'Authentication', `Successful login for ${user.email} (${effectiveCompany.name})`, company.id);
   const { passwordHash, ...safeUser } = user;
-  return { ...safeUser, company };
+  return { ...safeUser, company: effectiveCompany };
+}
+
+export async function getAllAuditLogsForPlatformAdmin(): Promise<AuditLog[]> {
+  return [...store.auditLogs];
 }
 
 // -------------------------------------------------------------
@@ -644,11 +825,35 @@ export async function addCustomer(data: Omit<Customer, 'id' | 'createdAt'>): Pro
     ...data,
     companyId: targetCompanyId,
     id: nextId,
+    code: data.code || `CUST-${String(nextId).padStart(3, '0')}`,
     createdAt: new Date().toISOString(),
   };
   store.customers.unshift(newCustomer);
   store.persist();
   addAuditLog('User', 'Created Customer', 'Sales & CRM', `Added customer ${newCustomer.name} (${newCustomer.code})`, targetCompanyId);
+
+  // Sync to Neon PostgreSQL if configured
+  try {
+    const db = getDb();
+    if (db) {
+      await db.insert(schema.customers).values({
+        companyId: targetCompanyId,
+        code: newCustomer.code,
+        name: newCustomer.name,
+        email: newCustomer.email,
+        phone: newCustomer.phone || null,
+        company: newCustomer.company || null,
+        taxNumber: newCustomer.taxNumber || null,
+        address: newCustomer.address || null,
+        creditLimit: String(newCustomer.creditLimit || 25000),
+        outstandingBalance: String(newCustomer.outstandingBalance || 0),
+        status: newCustomer.status || 'Active',
+      });
+    }
+  } catch (neonErr) {
+    console.warn('[Neon Sync] Failed to sync new customer to Neon:', neonErr);
+  }
+
   return newCustomer;
 }
 
@@ -667,11 +872,34 @@ export async function addSupplier(data: Omit<Supplier, 'id' | 'createdAt'>): Pro
     ...data,
     companyId: targetCompanyId,
     id: nextId,
+    code: data.code || `SUP-${String(nextId).padStart(3, '0')}`,
     createdAt: new Date().toISOString(),
   };
   store.suppliers.unshift(newSupplier);
   store.persist();
   addAuditLog('User', 'Created Supplier', 'Purchasing', `Added supplier ${newSupplier.name} (${newSupplier.code})`, targetCompanyId);
+
+  // Sync to Neon PostgreSQL if configured
+  try {
+    const db = getDb();
+    if (db) {
+      await db.insert(schema.suppliers).values({
+        companyId: targetCompanyId,
+        code: newSupplier.code,
+        name: newSupplier.name,
+        contactPerson: newSupplier.contactPerson || null,
+        email: newSupplier.email,
+        phone: newSupplier.phone || null,
+        address: newSupplier.address || null,
+        paymentTerms: newSupplier.paymentTerms || 'Net 30',
+        rating: newSupplier.rating || 5,
+        status: newSupplier.status || 'Active',
+      });
+    }
+  } catch (neonErr) {
+    console.warn('[Neon Sync] Failed to sync new supplier to Neon:', neonErr);
+  }
+
   return newSupplier;
 }
 
@@ -841,15 +1069,27 @@ export async function convertQuotationToSalesOrder(
   const quote = store.quotations.find((q) => q.id === quotationId);
   if (!quote) return null;
 
+  // Preserve complete quotation line items with negotiated unit prices
   const items = quote.itemsJson.map((i) => ({
     productId: i.productId,
+    productName: i.productName,
+    sku: i.sku,
     quantity: i.quantity,
+    unitPrice: i.unitPrice,
+    total: i.total,
   }));
 
   const salesOrder = await createSalesOrder({
     customerId: quote.customerId,
     customerName: quote.customerName,
+    customerEmail: quote.customerEmail,
     items,
+    subtotal: quote.subtotal,
+    discountAmount: quote.discountAmount,
+    taxRate: quote.taxRate,
+    taxAmount: quote.taxAmount,
+    totalAmount: quote.totalAmount,
+    terms: quote.terms,
     notes: `Converted from Quotation ${quote.quotationNumber}. ${quote.notes || ''}`.trim(),
     companyId: quote.companyId,
   });
@@ -880,7 +1120,21 @@ export async function getSalesOrders(companyId?: number): Promise<SalesOrder[]> 
 export async function createSalesOrder(data: {
   customerId: number;
   customerName: string;
-  items: Array<{ productId: number; quantity: number }>;
+  customerEmail?: string;
+  items: Array<{
+    productId: number;
+    quantity: number;
+    unitPrice?: number;
+    productName?: string;
+    sku?: string;
+    total?: number;
+  }>;
+  subtotal?: number;
+  discountAmount?: number;
+  taxRate?: number;
+  taxAmount?: number;
+  totalAmount?: number;
+  terms?: string;
   notes?: string;
   companyId?: number;
 }): Promise<SalesOrder> {
@@ -888,22 +1142,31 @@ export async function createSalesOrder(data: {
 
   const calculatedItems = data.items.map((item) => {
     const prod = store.products.find((p) => p.id === item.productId);
-    const unitPrice = prod ? prod.sellingPrice : 100;
-    const name = prod ? prod.name : 'Custom Item';
-    const sku = prod ? prod.sku : 'SKU-GEN';
+    const unitPrice = item.unitPrice !== undefined ? Number(item.unitPrice) : (prod ? prod.sellingPrice : 100);
+    const name = item.productName || (prod ? prod.name : 'Custom Item');
+    const sku = item.sku || (prod ? prod.sku : 'SKU-GEN');
+    const total = item.total !== undefined ? Number(item.total) : Number((unitPrice * item.quantity).toFixed(2));
     return {
       productId: item.productId,
       productName: name,
       sku,
       quantity: item.quantity,
       unitPrice,
-      total: unitPrice * item.quantity,
+      total,
     };
   });
 
-  const subtotal = calculatedItems.reduce((acc, curr) => acc + curr.total, 0);
-  const taxAmount = Number((subtotal * 0.18).toFixed(2));
-  const totalAmount = Number((subtotal + taxAmount).toFixed(2));
+  const rawSubtotal = calculatedItems.reduce((acc, curr) => acc + curr.total, 0);
+  const subtotal = data.subtotal !== undefined ? Number(data.subtotal) : Number(rawSubtotal.toFixed(2));
+  const discountAmount = Math.max(0, Number(data.discountAmount || 0));
+  const taxableAmount = Math.max(0, subtotal - discountAmount);
+  const taxRate = data.taxRate !== undefined ? Number(data.taxRate) : 18;
+  const taxAmount = data.taxAmount !== undefined
+    ? Number(data.taxAmount)
+    : Number(((taxableAmount * taxRate) / 100).toFixed(2));
+  const totalAmount = data.totalAmount !== undefined
+    ? Number(data.totalAmount)
+    : Number((taxableAmount + taxAmount).toFixed(2));
 
   const nextOrderId = store.salesOrders.reduce((max, o) => Math.max(max, o.id || 0), 0) + 1;
   const newOrder: SalesOrder = {
@@ -915,8 +1178,8 @@ export async function createSalesOrder(data: {
     orderDate: new Date().toISOString(),
     deliveryDate: new Date(Date.now() + 7 * 86400000).toISOString(),
     subtotal,
+    discountAmount,
     taxAmount,
-    discountAmount: 0,
     totalAmount,
     paymentStatus: 'Pending',
     orderStatus: 'Confirmed',
@@ -927,7 +1190,13 @@ export async function createSalesOrder(data: {
 
   store.salesOrders.unshift(newOrder);
 
-  // Auto-generate matching Invoice for this company
+  // Auto-generate matching Invoice for this company with preserved discount & taxation
+  let custEmail = data.customerEmail;
+  if (!custEmail) {
+    const cust = store.customers.find((c) => c.id === data.customerId);
+    custEmail = cust ? cust.email : 'billing@client.com';
+  }
+
   const nextInvoiceId = store.invoices.reduce((max, i) => Math.max(max, i.id || 0), 0) + 1;
   const newInvoice: Invoice = {
     id: nextInvoiceId,
@@ -936,17 +1205,18 @@ export async function createSalesOrder(data: {
     salesOrderId: newOrder.id,
     customerId: newOrder.customerId,
     customerName: newOrder.customerName,
-    customerEmail: 'billing@client.com',
+    customerEmail: custEmail,
     issueDate: new Date().toISOString(),
     dueDate: new Date(Date.now() + 30 * 86400000).toISOString(),
     subtotal,
-    taxRate: 18,
+    discountAmount,
+    taxRate,
     taxAmount,
     totalAmount,
     amountPaid: 0,
     status: 'Unpaid',
     itemsJson: calculatedItems,
-    terms: 'Net 30 days. Standard enterprise warranty applies.',
+    terms: data.terms || 'Net 30 days. Standard enterprise warranty applies.',
     createdAt: new Date().toISOString(),
   };
   store.invoices.unshift(newInvoice);
@@ -1256,11 +1526,36 @@ export async function createWorkOrder(data: Omit<WorkOrder, 'id' | 'createdAt'>)
     ...data,
     companyId: targetCompanyId,
     id: nextWOId,
+    orderNumber: data.orderNumber || `WO-2026-${String(nextWOId + 300).padStart(4, '0')}`,
     createdAt: new Date().toISOString(),
   };
   store.workOrders.unshift(newWO);
   store.persist();
   addAuditLog('User', 'Created Work Order', 'Operations', `Created work order ${newWO.orderNumber} - ${newWO.title}`, targetCompanyId);
+
+  // Sync to Neon PostgreSQL if configured
+  try {
+    const db = getDb();
+    if (db) {
+      await db.insert(schema.workOrders).values({
+        companyId: targetCompanyId,
+        orderNumber: newWO.orderNumber,
+        title: newWO.title,
+        productName: newWO.productName,
+        quantity: newWO.quantity,
+        priority: newWO.priority,
+        status: newWO.status,
+        assignedTo: newWO.assignedTo,
+        progress: newWO.progress,
+        startDate: new Date(newWO.startDate),
+        dueDate: new Date(newWO.dueDate),
+        notes: newWO.notes || null,
+      });
+    }
+  } catch (neonErr) {
+    console.warn('[Neon Sync] Failed to sync new work order to Neon:', neonErr);
+  }
+
   return newWO;
 }
 

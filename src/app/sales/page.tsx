@@ -28,7 +28,7 @@ import {
   XCircle,
   Sparkles,
 } from 'lucide-react';
-import { SalesOrder, Customer, Product, Invoice, Quotation } from '@/lib/mock-data';
+import { SalesOrder, Customer, Product, Invoice, Quotation, Company } from '@/lib/mock-data';
 
 function SalesContent() {
   const searchParams = useSearchParams();
@@ -45,6 +45,7 @@ function SalesContent() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [currentCompany, setCurrentCompany] = useState<Company | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [convertSuccessMsg, setConvertSuccessMsg] = useState<string | null>(null);
@@ -69,39 +70,79 @@ function SalesContent() {
   const [orderCustomer, setOrderCustomer] = useState<number>(1);
   const [selectedProduct, setSelectedProduct] = useState<number>(1);
   const [orderQuantity, setOrderQuantity] = useState<number>(1);
+  const [orderDiscount, setOrderDiscount] = useState<string>('0');
   const [orderNotes, setOrderNotes] = useState('');
 
   // New Customer Form state
   const [newCustName, setNewCustName] = useState('');
   const [newCustEmail, setNewCustEmail] = useState('');
   const [newCustCompany, setNewCustCompany] = useState('');
+  const [newCustPhone, setNewCustPhone] = useState('+91 98765 43210');
+  const [newCustGstin, setNewCustGstin] = useState('27AABCS0000A1Z1');
+  const [newCustAddress, setNewCustAddress] = useState('Corporate Headquarters, India');
   const [newCustCredit, setNewCustCredit] = useState('50000');
+  const [isSavingCustomer, setIsSavingCustomer] = useState(false);
 
   useEffect(() => {
     loadData();
   }, []);
 
+  useEffect(() => {
+    if (products.length > 0) {
+      setQuoteProduct((prev) => (products.some((p) => p.id === prev) ? prev : products[0].id));
+      setSelectedProduct((prev) => (products.some((p) => p.id === prev) ? prev : products[0].id));
+    }
+  }, [products]);
+
+  useEffect(() => {
+    if (customers.length > 0) {
+      setQuoteCustomer((prev) => (customers.some((c) => c.id === prev) ? prev : customers[0].id));
+      setOrderCustomer((prev) => (customers.some((c) => c.id === prev) ? prev : customers[0].id));
+    }
+  }, [customers]);
+
   async function loadData() {
     try {
-      const [salesRes, quoteRes, invRes, finRes] = await Promise.all([
+      const [salesRes, quoteRes, invRes, finRes, compRes] = await Promise.all([
         fetch('/api/sales'),
         fetch('/api/quotations'),
         fetch('/api/inventory'),
         fetch('/api/finance'),
+        fetch('/api/companies'),
       ]);
 
       const salesData = await salesRes.json();
       setOrders(salesData.orders || []);
-      setCustomers(salesData.customers || []);
+      const loadedCustomers: Customer[] = salesData.customers || [];
+      setCustomers(loadedCustomers);
 
       const quoteData = await quoteRes.json();
       setQuotations(Array.isArray(quoteData) ? quoteData : []);
 
       const invData = await invRes.json();
-      setProducts(invData || []);
+      const loadedProducts: Product[] = Array.isArray(invData) ? invData : [];
+      setProducts(loadedProducts);
+
+      if (loadedCustomers.length > 0) {
+        setQuoteCustomer((prev) => (loadedCustomers.some((c) => c.id === prev) ? prev : loadedCustomers[0].id));
+        setOrderCustomer((prev) => (loadedCustomers.some((c) => c.id === prev) ? prev : loadedCustomers[0].id));
+      }
+      if (loadedProducts.length > 0) {
+        setQuoteProduct((prev) => (loadedProducts.some((p) => p.id === prev) ? prev : loadedProducts[0].id));
+        setSelectedProduct((prev) => (loadedProducts.some((p) => p.id === prev) ? prev : loadedProducts[0].id));
+      }
 
       const finData = await finRes.json();
       setInvoices(finData.invoices || []);
+
+      if (compRes.ok) {
+        const compData = await compRes.json();
+        if (compData.company) {
+          setCurrentCompany(compData.company);
+        } else if (compData.companies && compData.companies.length > 0) {
+          setCurrentCompany(compData.companies[0]);
+        }
+      }
     } catch (e) {
       console.error(e);
     }
@@ -109,8 +150,18 @@ function SalesContent() {
 
   async function handleCreateQuotation(e: React.FormEvent) {
     e.preventDefault();
-    const cust = customers.find((c) => c.id === quoteCustomer);
-    if (!cust) return;
+    const activeCustId = customers.some((c) => c.id === quoteCustomer) ? quoteCustomer : (customers[0]?.id || 0);
+    const activeProdId = products.some((p) => p.id === quoteProduct) ? quoteProduct : (products[0]?.id || 0);
+    const cust = customers.find((c) => c.id === activeCustId);
+    if (!cust) {
+      alert('Please select or create a customer before generating a quotation.');
+      return;
+    }
+    const prod = products.find((p) => p.id === activeProdId);
+    if (!prod) {
+      alert('Please add at least one product before generating a quotation.');
+      return;
+    }
 
     try {
       const res = await fetch('/api/quotations', {
@@ -120,9 +171,9 @@ function SalesContent() {
           customerId: cust.id,
           customerName: cust.company || cust.name,
           customerEmail: cust.email,
-          items: [{ productId: quoteProduct, quantity: Number(quoteQuantity) }],
+          items: [{ productId: activeProdId, quantity: Number(quoteQuantity || 1) }],
           validityDays: Number(quoteValidityDays),
-          discountAmount: Number(quoteDiscount),
+          discountAmount: Number(quoteDiscount || 0),
           terms: quoteTerms,
           notes: quoteNotes,
         }),
@@ -137,6 +188,91 @@ function SalesContent() {
       }
     } catch (err) {
       console.error(err);
+    }
+  }
+
+  async function handleSendQuotationEmail(quote: Quotation) {
+    try {
+      // 1. Update quotation status to 'Sent' in the database
+      const res = await fetch('/api/quotations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update_status', quotationId: quote.id, status: 'Sent' }),
+      });
+
+      if (res.ok) {
+        loadData();
+        if (selectedQuote && selectedQuote.id === quote.id) {
+          setSelectedQuote({ ...selectedQuote, status: 'Sent' });
+        }
+      }
+
+      const compName = currentCompany?.name || 'ATB Software';
+      const compOps = currentCompany?.operationsName || `${compName} Enterprise Operations`;
+      const compReg = currentCompany?.registrationNumber || currentCompany?.code || 'ATB-REG-2026-99';
+      const compEmail = currentCompany?.email || 'billing@atbsoftware.com';
+      const compAddr = currentCompany?.address || 'ATB Towers, Wagholi, Pune, Maharashtra 412207';
+      const docType = currentCompany?.documentTypeNote || 'Official Commercial Price Quotation';
+
+      // 2. Prepare professional corporate email draft
+      const subject = encodeURIComponent(`${docType} - ${quote.quotationNumber} from ${compName}`);
+
+      const itemsList = (quote.itemsJson || [])
+        .map((i) => `  • ${i.productName} (Qty: ${i.quantity}) @ ₹${Number(i.unitPrice).toLocaleString('en-IN')} = ₹${Number(i.total).toLocaleString('en-IN')}`)
+        .join('\n');
+
+      const bodyText = [
+        `Dear ${quote.customerName || 'Valued Client'},`,
+        '',
+        `Thank you for your interest in our products and solutions. Please find the formal price proposal details below:`,
+        '',
+        `==================================================`,
+        `${docType.toUpperCase()}: ${quote.quotationNumber}`,
+        `==================================================`,
+        `Division / Entity: ${compOps}`,
+        `Registration:      ${compReg} • ${compEmail}`,
+        `Issue Date:        ${new Date(quote.issueDate).toLocaleDateString()}`,
+        `Expiry Date:       ${new Date(quote.expiryDate).toLocaleDateString()}`,
+        '',
+        `ITEM DETAILS & PRICING:`,
+        itemsList,
+        '',
+        `--------------------------------------------------`,
+        `Calculated Subtotal:  ₹${Number(quote.subtotal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+        quote.discountAmount > 0
+          ? `Discount Applied:    -₹${Number(quote.discountAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+          : null,
+        `Taxable Amount:       ₹${Math.max(0, Number(quote.subtotal) - Number(quote.discountAmount)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+        `Estimated GST (18%):  ₹${Number(quote.taxAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+        `Grand Total:          ₹${Number(quote.totalAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
+        `--------------------------------------------------`,
+        '',
+        `COMMERCIAL TERMS:`,
+        quote.terms || 'Standard enterprise 30-day quotation validity and manufacturer warranty applies.',
+        '',
+        quote.notes ? `PROJECT NOTES:\n${quote.notes}\n` : null,
+        `To accept this proposal, please reply directly to this email or reach out to our enterprise team.`,
+        '',
+        `Best regards,`,
+        `${compName} Commercial Sales & Solutions Team`,
+        compAddr,
+        `Email: ${compEmail}`,
+      ]
+        .filter((line) => line !== null)
+        .join('\n');
+
+      const recipient = quote.customerEmail || compEmail;
+      const mailtoUrl = `mailto:${recipient}?subject=${subject}&body=${encodeURIComponent(bodyText)}`;
+
+      // 3. Trigger email client
+      window.location.href = mailtoUrl;
+
+      // 4. Show success banner
+      setConvertSuccessMsg(`Email client draft opened for ${recipient}! Quotation ${quote.quotationNumber} marked as Sent.`);
+      setTimeout(() => setConvertSuccessMsg(null), 7000);
+    } catch (err) {
+      console.error(err);
+      alert('Error updating quotation status.');
     }
   }
 
@@ -183,17 +319,30 @@ function SalesContent() {
 
   async function handleCreateOrder(e: React.FormEvent) {
     e.preventDefault();
-    const cust = customers.find((c) => c.id === orderCustomer);
-    if (!cust) return;
+    const activeCustId = customers.some((c) => c.id === orderCustomer) ? orderCustomer : (customers[0]?.id || 0);
+    const activeProdId = products.some((p) => p.id === selectedProduct) ? selectedProduct : (products[0]?.id || 0);
+    const cust = customers.find((c) => c.id === activeCustId);
+    if (!cust) {
+      alert('Please select or create a customer account before issuing an order.');
+      return;
+    }
+    const prod = products.find((p) => p.id === activeProdId);
+    if (!prod) {
+      alert('Please add at least one product SKU to inventory before issuing an order.');
+      return;
+    }
 
     try {
+      const discountNum = Math.max(0, Number(orderDiscount) || 0);
       const res = await fetch('/api/sales', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customerId: cust.id,
           customerName: cust.company || cust.name,
-          items: [{ productId: selectedProduct, quantity: Number(orderQuantity) }],
+          customerEmail: cust.email,
+          items: [{ productId: activeProdId, quantity: Number(orderQuantity || 1) }],
+          discountAmount: discountNum,
           notes: orderNotes,
         }),
       });
@@ -201,6 +350,7 @@ function SalesContent() {
       if (res.ok) {
         setIsOrderModalOpen(false);
         setOrderNotes('');
+        setOrderDiscount('0');
         loadData();
       }
     } catch (err) {
@@ -210,26 +360,41 @@ function SalesContent() {
 
   async function handleCreateCustomer(e: React.FormEvent) {
     e.preventDefault();
-    const newCust: Customer = {
-      id: customers.length + 1,
-      code: `CUST-${String(customers.length + 1).padStart(3, '0')}`,
-      name: newCustName,
-      email: newCustEmail,
-      company: newCustCompany,
-      phone: '+91 98765 43210',
-      taxNumber: 'GSTIN-29AABCS0000A1Z1',
-      address: 'Corporate Headquarters',
-      creditLimit: parseFloat(newCustCredit) || 25000,
-      outstandingBalance: 0,
-      status: 'Active',
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      setIsSavingCustomer(true);
+      const res = await fetch('/api/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newCustName,
+          email: newCustEmail,
+          company: newCustCompany,
+          phone: newCustPhone || '+91 98765 43210',
+          taxNumber: newCustGstin || '27AABCS0000A1Z1',
+          address: newCustAddress || 'Corporate Headquarters, India',
+          creditLimit: parseFloat(newCustCredit) || 25000,
+          outstandingBalance: 0,
+          status: 'Active',
+        }),
+      });
 
-    setCustomers([newCust, ...customers]);
-    setIsCustomerModalOpen(false);
-    setNewCustName('');
-    setNewCustEmail('');
-    setNewCustCompany('');
+      if (res.ok) {
+        setIsCustomerModalOpen(false);
+        setNewCustName('');
+        setNewCustEmail('');
+        setNewCustCompany('');
+        setNewCustCredit('50000');
+        await loadData();
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Failed to save customer to database.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error saving customer to database.');
+    } finally {
+      setIsSavingCustomer(false);
+    }
   }
 
   async function handleUpdateOrderStatus(orderId: number, status: SalesOrder['orderStatus']) {
@@ -570,17 +735,25 @@ function SalesContent() {
 
                             {quote.status === 'Draft' && (
                               <button
-                                onClick={() => handleUpdateQuoteStatus(quote.id, 'Sent')}
-                                title="Mark as Sent to Client"
+                                onClick={() => handleSendQuotationEmail(quote)}
+                                title="Open email draft in default mail client and mark as Sent"
                                 className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 hover:bg-blue-100 text-xs font-semibold"
                               >
-                                <Send className="w-3.5 h-3.5" />
+                                <Mail className="w-3.5 h-3.5" />
                                 <span>Send</span>
                               </button>
                             )}
 
                             {quote.status === 'Sent' && (
                               <>
+                                <button
+                                  onClick={() => handleSendQuotationEmail(quote)}
+                                  title="Re-open email draft in mail client"
+                                  className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold"
+                                >
+                                  <Mail className="w-3.5 h-3.5" />
+                                  <span className="hidden sm:inline">Email</span>
+                                </button>
                                 <button
                                   onClick={() => handleUpdateQuoteStatus(quote.id, 'Accepted')}
                                   title="Mark as Accepted by Client"
@@ -696,8 +869,15 @@ function SalesContent() {
                       <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300">
                         {order.itemsJson.map((i) => `${i.quantity}x ${i.productName}`).join(', ')}
                       </td>
-                      <td className="py-3.5 px-4 text-right font-bold text-slate-900 dark:text-white">
-                        ₹{order.totalAmount.toLocaleString('en-IN')}
+                      <td className="py-3.5 px-4 text-right">
+                        <div className="font-bold text-slate-900 dark:text-white">
+                          ₹{order.totalAmount.toLocaleString('en-IN')}
+                        </div>
+                        {Boolean(order.discountAmount && order.discountAmount > 0) && (
+                          <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                            Saved ₹{order.discountAmount.toLocaleString('en-IN')}
+                          </div>
+                        )}
                       </td>
                       <td className="py-3.5 px-4 text-center">
                         <span
@@ -884,7 +1064,7 @@ function SalesContent() {
               Client / Customer Account
             </label>
             <select
-              value={orderCustomer}
+              value={customers.some((c) => c.id === orderCustomer) ? orderCustomer : (customers[0]?.id ?? '')}
               onChange={(e) => setOrderCustomer(Number(e.target.value))}
               className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white"
             >
@@ -902,13 +1082,13 @@ function SalesContent() {
                 Select Product SKU
               </label>
               <select
-                value={selectedProduct}
+                value={products.some((p) => p.id === selectedProduct) ? selectedProduct : (products[0]?.id ?? '')}
                 onChange={(e) => setSelectedProduct(Number(e.target.value))}
                 className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white"
               >
                 {products.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name} - ₹{p.sellingPrice} (Stock: {p.currentStock})
+                    {p.name} - ₹{p.sellingPrice.toLocaleString('en-IN')} (Stock: {p.currentStock})
                   </option>
                 ))}
               </select>
@@ -929,6 +1109,21 @@ function SalesContent() {
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Promotional / Partner Discount (INR - ₹)
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="1"
+              value={orderDiscount}
+              onChange={(e) => setOrderDiscount(e.target.value)}
+              placeholder="0"
+              className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
               Internal Fulfillment Notes / Project Reference
             </label>
             <textarea
@@ -939,6 +1134,57 @@ function SalesContent() {
               className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-2.5 text-slate-900 dark:text-white"
             />
           </div>
+
+          {/* Order Live Calculation Box */}
+          {(() => {
+            const activeProductId = products.some((p) => p.id === selectedProduct)
+              ? selectedProduct
+              : (products[0]?.id || 0);
+            const prod = products.find((p) => p.id === activeProductId);
+            const unitPrice = prod ? Number(prod.sellingPrice || 0) : 0;
+            const subtotal = unitPrice * Number(orderQuantity || 1);
+            const discountNum = Math.max(0, Number(orderDiscount) || 0);
+            const taxable = Math.max(0, subtotal - discountNum);
+            const tax = Number((taxable * 0.18).toFixed(2));
+            const grandTotal = Number((taxable + tax).toFixed(2));
+
+            return (
+              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 text-xs space-y-1">
+                <div className="flex justify-between text-slate-500">
+                  <span>Unit Price:</span>
+                  <span className="font-mono font-semibold text-slate-900 dark:text-white">
+                    ₹{unitPrice.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className="flex justify-between text-slate-500">
+                  <span>Subtotal ({orderQuantity} units):</span>
+                  <span className="font-mono font-semibold text-slate-900 dark:text-white">
+                    ₹{subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                {discountNum > 0 && (
+                  <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
+                    <span>Discount Applied:</span>
+                    <span className="font-mono">
+                      -₹{discountNum.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between text-slate-500">
+                  <span>Est. GST (18%):</span>
+                  <span className="font-mono font-semibold text-slate-900 dark:text-white">
+                    ₹{tax.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm font-bold text-blue-600 dark:text-blue-400 pt-1 border-t border-slate-200 dark:border-slate-700">
+                  <span>Order Grand Total:</span>
+                  <span className="font-mono">
+                    ₹{grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
 
           <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
             <button
@@ -1007,20 +1253,73 @@ function SalesContent() {
               />
             </div>
           </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Contact Phone
+              </label>
+              <input
+                type="text"
+                value={newCustPhone}
+                onChange={(e) => setNewCustPhone(e.target.value)}
+                placeholder="e.g. +91 98765 43210"
+                className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Client GSTIN / Tax ID
+              </label>
+              <input
+                type="text"
+                value={newCustGstin}
+                onChange={(e) => setNewCustGstin(e.target.value)}
+                placeholder="e.g. 27AABCS0000A1Z1"
+                className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white font-mono"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Client GSTIN / Tax ID
+              </label>
+              <input
+                type="text"
+                value={newCustGstin}
+                onChange={(e) => setNewCustGstin(e.target.value)}
+                placeholder="e.g. 27AABCS0000A1Z1"
+                className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Credit Limit (INR - ₹)
+              </label>
+              <input
+                type="number"
+                value={newCustCredit}
+                onChange={(e) => setNewCustCredit(e.target.value)}
+                className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white"
+              />
+            </div>
+          </div>
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Credit Limit (INR - ₹)
+              Registered Corporate Address
             </label>
             <input
-              type="number"
-              value={newCustCredit}
-              onChange={(e) => setNewCustCredit(e.target.value)}
+              type="text"
+              value={newCustAddress}
+              onChange={(e) => setNewCustAddress(e.target.value)}
+              placeholder="e.g. Plot 42, Hinjewadi Phase 1, Pune, Maharashtra"
               className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white"
             />
           </div>
           <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
             <button
               type="button"
+              disabled={isSavingCustomer}
               onClick={() => setIsCustomerModalOpen(false)}
               className="px-4 py-2 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
             >
@@ -1028,9 +1327,17 @@ function SalesContent() {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-xs font-bold rounded-xl bg-blue-600 text-white hover:bg-blue-700"
+              disabled={isSavingCustomer}
+              className="px-4 py-2 text-xs font-bold rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1.5"
             >
-              Save Customer
+              {isSavingCustomer ? (
+                <>
+                  <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Saving to Database...</span>
+                </>
+              ) : (
+                <span>Save Customer</span>
+              )}
             </button>
           </div>
         </form>
@@ -1050,12 +1357,12 @@ function SalesContent() {
             <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-6 border-b border-slate-200 dark:border-slate-800">
               <div>
                 <h2 className="text-xl font-black tracking-tight text-blue-600 dark:text-blue-400">
-                  ATB Software
+                  {currentCompany?.name || 'ATB Software'}
                 </h2>
                 <p className="text-xs text-slate-500 mt-1">
-                  ATB Software Enterprise Operations
+                  {currentCompany?.operationsName || `${currentCompany?.name || 'ATB Software'} Enterprise Operations`}
                   <br />
-                  Registration: ATB-REG-2026-99 • billing@atbsoftware.com
+                  Registration: {currentCompany?.registrationNumber || currentCompany?.code || 'ATB-REG-2026-99'} • {currentCompany?.email || 'billing@atbsoftware.com'}
                 </p>
               </div>
 
@@ -1151,6 +1458,12 @@ function SalesContent() {
                   <span>Subtotal:</span>
                   <span className="font-mono">₹{selectedInvoice.subtotal.toLocaleString('en-IN')}</span>
                 </div>
+                {Boolean(selectedInvoice.discountAmount && selectedInvoice.discountAmount > 0) && (
+                  <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
+                    <span>Discount Applied:</span>
+                    <span className="font-mono">-₹{selectedInvoice.discountAmount?.toLocaleString('en-IN')}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-slate-500">
                   <span>GST ({selectedInvoice.taxRate}%):</span>
                   <span className="font-mono">₹{selectedInvoice.taxAmount.toLocaleString('en-IN')}</span>
@@ -1194,7 +1507,7 @@ function SalesContent() {
               Prospective Client / Customer
             </label>
             <select
-              value={quoteCustomer}
+              value={customers.some((c) => c.id === quoteCustomer) ? quoteCustomer : (customers[0]?.id ?? '')}
               onChange={(e) => setQuoteCustomer(Number(e.target.value))}
               className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white"
             >
@@ -1212,7 +1525,7 @@ function SalesContent() {
                 Select Product SKU
               </label>
               <select
-                value={quoteProduct}
+                value={products.some((p) => p.id === quoteProduct) ? quoteProduct : (products[0]?.id ?? '')}
                 onChange={(e) => setQuoteProduct(Number(e.target.value))}
                 className="w-full text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-2 text-slate-900 dark:text-white"
               >
@@ -1297,8 +1610,11 @@ function SalesContent() {
 
           {/* Live Calculation Box */}
           {(() => {
-            const prod = products.find((p) => p.id === quoteProduct);
-            const unitPrice = prod ? prod.sellingPrice : 0;
+            const activeProductId = products.some((p) => p.id === quoteProduct)
+              ? quoteProduct
+              : (products[0]?.id || 0);
+            const prod = products.find((p) => p.id === activeProductId);
+            const unitPrice = prod ? Number(prod.sellingPrice || 0) : 0;
             const subtotal = unitPrice * Number(quoteQuantity || 1);
             const discount = parseFloat(quoteDiscount) || 0;
             const taxable = Math.max(0, subtotal - discount);
@@ -1368,14 +1684,14 @@ function SalesContent() {
               <div>
                 <h2 className="text-xl font-black tracking-tight text-indigo-600 dark:text-indigo-400 flex items-center gap-2">
                   <FileSpreadsheet className="w-6 h-6" />
-                  <span>ATB Software</span>
+                  <span>{currentCompany?.name || 'ATB Software'}</span>
                 </h2>
                 <p className="text-xs text-slate-500 mt-1">
-                  ATB Software Enterprise Operations
+                  {currentCompany?.operationsName || `${currentCompany?.name || 'ATB Software'} Enterprise Operations`}
                   <br />
-                  Registration: ATB-REG-2026-99 • billing@atbsoftware.com
+                  Registration: {currentCompany?.registrationNumber || currentCompany?.code || 'ATB-REG-2026-99'} • {currentCompany?.email || 'billing@atbsoftware.com'}
                   <br />
-                  Document Type: Official Commercial Price Quotation
+                  Document Type: {currentCompany?.documentTypeNote || 'Official Commercial Price Quotation'}
                 </p>
               </div>
 
@@ -1437,7 +1753,7 @@ function SalesContent() {
                 </div>
                 {selectedQuote.convertedSalesOrderId && (
                   <div className="text-purple-600 font-semibold pt-1">
-                    ✓ Converted into Order SO-2026-009{selectedQuote.convertedSalesOrderId}
+                    ✓ Converted into Order {orders.find((o) => o.id === selectedQuote.convertedSalesOrderId)?.orderNumber || `SO-ID-${selectedQuote.convertedSalesOrderId}`}
                   </div>
                 )}
               </div>
@@ -1517,21 +1833,30 @@ function SalesContent() {
               <div className="flex items-center gap-2">
                 {selectedQuote.status === 'Draft' && (
                   <button
-                    onClick={() => handleUpdateQuoteStatus(selectedQuote.id, 'Sent')}
+                    onClick={() => handleSendQuotationEmail(selectedQuote)}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700"
                   >
-                    <Send className="w-3.5 h-3.5" />
-                    <span>Send to Client</span>
+                    <Mail className="w-3.5 h-3.5" />
+                    <span>Send Email to Client</span>
                   </button>
                 )}
                 {selectedQuote.status === 'Sent' && (
-                  <button
-                    onClick={() => handleUpdateQuoteStatus(selectedQuote.id, 'Accepted')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700"
-                  >
-                    <Check className="w-3.5 h-3.5" />
-                    <span>Mark Accepted</span>
-                  </button>
+                  <>
+                    <button
+                      onClick={() => handleSendQuotationEmail(selectedQuote)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold hover:bg-slate-200"
+                    >
+                      <Mail className="w-3.5 h-3.5" />
+                      <span>Re-open Email</span>
+                    </button>
+                    <button
+                      onClick={() => handleUpdateQuoteStatus(selectedQuote.id, 'Accepted')}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Mark Accepted</span>
+                    </button>
+                  </>
                 )}
                 {selectedQuote.status !== 'Converted' && (
                   <button

@@ -33,94 +33,68 @@ export default function OperationsPage() {
 
   async function loadWorkOrders() {
     try {
-      const res = await fetch('/api/sales'); // or initial state
-      // Provide work orders
-      const list: WorkOrder[] = [
-        {
-          id: 1,
-          orderNumber: 'WO-2026-0301',
-          title: 'Precision Assembly: 10x Server Node X9 Units',
-          productName: 'ATB HyperCluster Server Node X9',
-          quantity: 10,
-          priority: 'High',
-          status: 'In Progress',
-          assignedTo: 'Rohan Patel (Lead Tech)',
-          progress: 70,
-          startDate: '2026-03-10T08:00:00Z',
-          dueDate: '2026-03-24T17:00:00Z',
-          notes: 'Thermal paste application and stress testing running in Bay 3.',
-          createdAt: '2026-03-10T08:00:00Z',
-        },
-        {
-          id: 2,
-          orderNumber: 'WO-2026-0302',
-          title: 'Firmware Flash & Quality Calibration for IoT Sensors',
-          productName: 'ATB Industrial IoT Telemetry Sensor Suite',
-          quantity: 50,
-          priority: 'Urgent',
-          status: 'Quality Review',
-          assignedTo: 'Hardware Test Lab Team',
-          progress: 90,
-          startDate: '2026-03-12T09:00:00Z',
-          dueDate: '2026-03-18T17:00:00Z',
-          notes: 'All 50 units pass initial telemetry handshake.',
-          createdAt: '2026-03-12T09:00:00Z',
-        },
-        {
-          id: 3,
-          orderNumber: 'WO-2026-0303',
-          title: 'Custom Laser Etching & Housing Mill for HSM Enclosures',
-          productName: 'Hardware Cryptographic Security Module (HSM)',
-          quantity: 15,
-          priority: 'Medium',
-          status: 'Pending',
-          assignedTo: 'CNC Operations',
-          progress: 25,
-          startDate: '2026-03-15T08:00:00Z',
-          dueDate: '2026-04-02T17:00:00Z',
-          notes: 'Awaiting aluminum alloy 7075 billet cutting approval.',
-          createdAt: '2026-03-15T08:00:00Z',
-        },
-      ];
-      setWorkOrders(list);
+      const res = await fetch('/api/operations');
+      if (res.ok) {
+        const list: WorkOrder[] = await res.json();
+        setWorkOrders(list || []);
+      }
     } catch (e) {
       console.error(e);
     }
   }
 
-  function handleCreateWorkOrder(e: React.FormEvent) {
+  async function handleCreateWorkOrder(e: React.FormEvent) {
     e.preventDefault();
-    const newWO: WorkOrder = {
-      id: workOrders.length + 1,
-      orderNumber: `WO-2026-${String(workOrders.length + 304).padStart(4, '0')}`,
-      title,
-      productName,
-      quantity: Number(quantity),
-      priority,
-      status: 'Pending',
-      assignedTo,
-      progress: 0,
-      startDate: new Date().toISOString(),
-      dueDate: new Date(Date.now() + 14 * 86400000).toISOString(),
-      createdAt: new Date().toISOString(),
-    };
-    setWorkOrders([newWO, ...workOrders]);
-    setIsModalOpen(false);
-    setTitle('');
+    try {
+      const res = await fetch('/api/operations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title,
+          productName,
+          quantity: Number(quantity),
+          priority,
+          status: 'Pending',
+          assignedTo,
+          progress: 0,
+          startDate: new Date().toISOString(),
+          dueDate: new Date(Date.now() + 14 * 86400000).toISOString(),
+        }),
+      });
+
+      if (res.ok) {
+        setIsModalOpen(false);
+        setTitle('');
+        await loadWorkOrders();
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Failed to save work order.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error connecting to operations service.');
+    }
   }
 
-  function handleUpdateStatus(orderId: number, newStatus: WorkOrder['status']) {
-    setWorkOrders(
-      workOrders.map((wo) =>
-        wo.id === orderId
-          ? {
-              ...wo,
-              status: newStatus,
-              progress: newStatus === 'Completed' ? 100 : newStatus === 'Pending' ? 10 : wo.progress,
-            }
-          : wo
-      )
-    );
+  async function handleUpdateStatus(orderId: number, newStatus: WorkOrder['status']) {
+    try {
+      const progress = newStatus === 'Completed' ? 100 : newStatus === 'Pending' ? 10 : undefined;
+      const res = await fetch('/api/operations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_status',
+          orderId,
+          status: newStatus,
+          progress,
+        }),
+      });
+      if (res.ok) {
+        await loadWorkOrders();
+      }
+    } catch (e) {
+      console.error(e);
+    }
   }
 
   const columns: Array<{ title: string; status: WorkOrder['status']; color: string }> = [

@@ -8,6 +8,9 @@ import {
   deleteUser,
   getUserById,
   getAllUsersForPlatformAdmin,
+  resetUserPassword,
+  toggleUserStatus,
+  cancelCompanyLicense,
 } from '@/lib/data-service';
 
 export async function GET(request: Request) {
@@ -98,7 +101,7 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json();
-    const { id, name, role, department, status, password } = body;
+    const { id, action, name, role, department, status, password } = body;
 
     if (!id) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
@@ -115,6 +118,67 @@ export async function PUT(request: Request) {
         { error: 'Forbidden: You do not have permission to modify users of another company.' },
         { status: 403 }
       );
+    }
+
+    // Action 1: Super Admin quick password reset
+    if (action === 'reset_password') {
+      if (!password || password.length < 6) {
+        return NextResponse.json(
+          { error: 'New password must be at least 6 characters long' },
+          { status: 400 }
+        );
+      }
+      await resetUserPassword(Number(id), password, session.name);
+      return NextResponse.json({
+        success: true,
+        message: `Password reset successfully for login ${existingUser.email}!`,
+      });
+    }
+
+    // Action 2: Quick Login Status Toggle (Active / Suspended)
+    if (action === 'toggle_status') {
+      const updatedUser = await toggleUserStatus(Number(id), session.name);
+      return NextResponse.json({
+        success: true,
+        message: `Login status for ${existingUser.email} set to ${updatedUser.status}`,
+        user: updatedUser,
+      });
+    }
+
+    // Action 3: Cancel Subscription License & Suspend Access
+    if (action === 'cancel_license') {
+      if (!session.isPlatformAdmin) {
+        return NextResponse.json(
+          { error: 'Forbidden: Only Platform Super Admins can cancel subscription licenses.' },
+          { status: 403 }
+        );
+      }
+
+      if (existingUser.isPlatformAdmin) {
+        return NextResponse.json(
+          { error: 'Cannot cancel license of Platform Super Admin.' },
+          { status: 400 }
+        );
+      }
+
+      // If this user is CEO, also cancel company license
+      if (existingUser.isCompanyAdmin) {
+        await cancelCompanyLicense(existingUser.companyId, session.name);
+      }
+
+      // Ensure user is Suspended
+      let updatedUser = existingUser;
+      if (existingUser.status === 'Active') {
+        updatedUser = await toggleUserStatus(Number(id), session.name);
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: existingUser.isCompanyAdmin
+          ? `Subscription license cancelled for ${existingUser.name}'s company! All organizational access revoked.`
+          : `Subscription seat license cancelled and login access suspended for ${existingUser.name}!`,
+        user: updatedUser,
+      });
     }
 
     const updated = await updateUser(Number(id), {
@@ -164,17 +228,22 @@ export async function DELETE(request: Request) {
 
     if (existingUser.isCompanyAdmin && !session.isPlatformAdmin) {
       return NextResponse.json(
-        { error: 'Forbidden: The company primary CEO account cannot be deleted.' },
+        { error: 'Forbidden: The company primary CEO account cannot be deleted without Platform Super Admin authority.' },
         { status: 403 }
       );
     }
 
-    const success = await deleteUser(Number(id));
+    const success = await deleteUser(Number(id), !!session.isPlatformAdmin);
     if (!success) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, message: 'Sub-account decommissioned successfully' });
+    return NextResponse.json({
+      success: true,
+      message: existingUser.isCompanyAdmin
+        ? `CEO account for ${existingUser.name} (${existingUser.email}) permanently deleted`
+        : `User login account for ${existingUser.name} (${existingUser.email}) decommissioned successfully`,
+    });
   } catch (error: unknown) {
     const err = error as Error;
     return NextResponse.json({ error: err.message }, { status: 400 });

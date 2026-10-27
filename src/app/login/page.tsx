@@ -11,71 +11,19 @@ import {
   Eye,
   EyeOff,
   Sparkles,
-  CheckCircle2,
   AlertCircle,
   Building2,
   KeyRound,
   UserPlus,
 } from 'lucide-react';
 
-const DEMO_ACCOUNTS = [
-  // Company 1: ATB Software Solutions
-  {
-    company: 'ATB Software Solutions',
-    name: 'Aarav Mehta',
-    role: 'Platform Super Admin & CEO',
-    email: 'aarav.mehta@atbsoftware.com',
-    password: 'admin@123',
-    badge: 'Co. 1 • Super Admin',
-    badgeColor: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
-  },
-  {
-    company: 'ATB Software Solutions',
-    name: 'Ananya Iyer',
-    role: 'Chief Financial Officer',
-    email: 'ananya.iyer@atbsoftware.com',
-    password: 'finance@123',
-    badge: 'Co. 1 • Finance',
-    badgeColor: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-  },
-  // Company 2: Tata Advanced Robotics (Tenant 2)
-  {
-    company: 'Tata Advanced Robotics',
-    name: 'Kabir Singhania',
-    role: 'Tata Robotics CEO & Admin',
-    email: 'kabir.singhania@tatarobotics.com',
-    password: 'tata@123',
-    badge: 'Co. 2 • Tenant CEO',
-    badgeColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-  },
-  {
-    company: 'Tata Advanced Robotics',
-    name: 'Riya Sen',
-    role: 'Tata Defence Sales Lead',
-    email: 'riya.sen@tatarobotics.com',
-    password: 'tata@123',
-    badge: 'Co. 2 • Sales Staff',
-    badgeColor: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-  },
-  // Company 3: Nexus Quantum (Pending Approval Demo)
-  {
-    company: 'Nexus Quantum Systems',
-    name: 'Rohan Deshmukh',
-    role: 'CEO (Pending Approval)',
-    email: 'rohan@nexusquantum.in',
-    password: 'nexus@123',
-    badge: 'Co. 3 • Pending',
-    badgeColor: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
-  },
-];
-
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTarget = searchParams.get('redirect') || '/';
 
-  const [email, setEmail] = useState('aarav.mehta@atbsoftware.com');
-  const [password, setPassword] = useState('admin@123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -99,20 +47,20 @@ function LoginForm() {
         throw new Error(data.error || 'Authentication failed. Please verify credentials.');
       }
 
-      // Successful login, navigate to destination
-      router.push(redirectTarget);
+      // Role-based routing: if Super Admin, default to /admin console unless another redirect was specified
+      if (redirectTarget && redirectTarget !== '/') {
+        router.push(redirectTarget);
+      } else if (data.user?.isPlatformAdmin) {
+        router.push('/admin');
+      } else {
+        router.push('/');
+      }
       router.refresh();
     } catch (err: unknown) {
       const error = err as Error;
       setErrorMsg(error.message);
       setLoading(false);
     }
-  }
-
-  function fillDemoAccount(acc: (typeof DEMO_ACCOUNTS)[0]) {
-    setEmail(acc.email);
-    setPassword(acc.password);
-    setErrorMsg(null);
   }
 
   return (
@@ -128,14 +76,14 @@ function LoginForm() {
             <Shield className="w-5 h-5 text-white" />
           </div>
           <div>
-            <div className="text-base font-extrabold tracking-tight">ATB Software Solutions</div>
+            <div className="text-base font-extrabold tracking-tight">ATB Software</div>
             <div className="text-[10px] text-blue-300 font-mono">Enterprise ERP Suite • v2.6</div>
           </div>
         </div>
 
         <div className="hidden sm:flex items-center gap-2 text-[11px] text-slate-400 bg-white/5 px-3 py-1.5 rounded-full border border-white/10">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span>Neon Cloud Postgres Active</span>
+          <span>Multi-Tenant Cloud Active</span>
         </div>
       </header>
 
@@ -166,9 +114,9 @@ function LoginForm() {
                 <span>Authorized Indian Corporate Entity</span>
               </div>
               <div className="text-[11px] text-slate-400 space-y-1 font-mono">
-                <div>Entity: ATB Software Solutions Private Limited</div>
-                <div>CIN: U72200KA2026PTC098765 | GSTIN: 29AABCU9603R1Z7</div>
-                <div>Bangalore CyberPark, Karnataka, India</div>
+                <div>Entity: ATB Software</div>
+                <div>CIN: U72200MH2026PTC****** | GSTIN: 27AABCU****R1Z*</div>
+                <div>Wagholi, Pune, Maharashtra, India</div>
               </div>
             </div>
           </div>
@@ -179,7 +127,7 @@ function LoginForm() {
               <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-6">
                 <div>
                   <h2 className="text-xl font-bold tracking-tight text-white">Sign In to Workspace</h2>
-                  <p className="text-xs text-slate-400 mt-0.5">Enter your corporate credentials</p>
+                  <p className="text-xs text-slate-400 mt-0.5">Enter your corporate email and password</p>
                 </div>
                 <div className="p-2.5 rounded-2xl bg-white/5 border border-white/10 text-slate-300">
                   <KeyRound className="w-5 h-5 text-blue-400" />
@@ -205,8 +153,8 @@ function LoginForm() {
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="user@atbsoftware.com"
-                      className="w-full pl-10 pr-4 py-2.5 text-xs rounded-xl bg-white/5 border border-white/10 focus:border-blue-500 focus:outline-none text-white placeholder-slate-500 transition-colors"
+                      placeholder="name@company.com"
+                      className="w-full pl-10 pr-4 py-2.5 text-xs rounded-xl bg-white/5 border border-white/10 focus:border-blue-500 focus:outline-hidden text-white placeholder-slate-500 transition-colors"
                     />
                   </div>
                 </div>
@@ -228,7 +176,7 @@ function LoginForm() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••••••"
-                      className="w-full pl-10 pr-10 py-2.5 text-xs rounded-xl bg-white/5 border border-white/10 focus:border-blue-500 focus:outline-none text-white placeholder-slate-500 transition-colors"
+                      className="w-full pl-10 pr-10 py-2.5 text-xs rounded-xl bg-white/5 border border-white/10 focus:border-blue-500 focus:outline-hidden text-white placeholder-slate-500 transition-colors"
                     />
                     <button
                       type="button"
@@ -264,55 +212,32 @@ function LoginForm() {
                     </span>
                   ) : (
                     <>
-                      <span>Sign In to ATB ERP</span>
+                      <span>Sign In to Workspace</span>
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}
                 </button>
               </form>
 
-              {/* 1-Click Demo Accounts Switcher */}
-              <div className="mt-6 pt-5 border-t border-white/10">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-blue-400" />
-                    <span>Quick Demo Sign-In (Click to Auto-fill)</span>
-                  </span>
+              {/* Onboarding / Sign Up on behalf of Company */}
+              <div className="mt-8 pt-6 border-t border-white/10 text-center space-y-3.5">
+                <div className="space-y-1">
+                  <p className="text-xs text-slate-300 font-semibold">
+                    Don&apos;t have an organization workspace yet?
+                  </p>
+                  <p className="text-[11px] text-slate-400 max-w-sm mx-auto">
+                    Sign up on behalf of your company to provision a dedicated ERP tenant and primary CEO administrator account.
+                  </p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {DEMO_ACCOUNTS.map((acc) => (
-                    <button
-                      key={acc.email}
-                      type="button"
-                      onClick={() => fillDemoAccount(acc)}
-                      className={`text-left p-2.5 rounded-xl border transition-all text-xs flex items-center justify-between ${
-                        email === acc.email
-                          ? 'bg-blue-600/20 border-blue-500/50 shadow-sm'
-                          : 'bg-white/5 hover:bg-white/10 border-white/5 hover:border-white/20'
-                      }`}
-                    >
-                      <div className="min-w-0 pr-2">
-                        <div className="font-semibold text-slate-200 truncate">{acc.name}</div>
-                        <div className="text-[10px] text-slate-400 truncate">{acc.role}</div>
-                      </div>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium border ${acc.badgeColor} shrink-0`}>
-                        {acc.badge}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-
-                {/* Register New Company Workspace Link */}
-                <div className="mt-4 pt-3 border-t border-white/5 text-center">
-                  <Link
-                    href="/signup"
-                    className="inline-flex items-center justify-center gap-2 w-full py-2.5 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-blue-300 hover:text-blue-200 transition-colors"
-                  >
-                    <UserPlus className="w-4 h-4 text-blue-400" />
-                    <span>Register New Company (Create Tenant & CEO Account)</span>
-                  </Link>
-                </div>
+                <Link
+                  href="/signup"
+                  className="inline-flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs shadow-md shadow-blue-500/20 transition-all"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span>Register Company & Create Account</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
               </div>
             </div>
           </div>
@@ -321,7 +246,7 @@ function LoginForm() {
 
       {/* Footer */}
       <footer className="p-4 text-center text-xs text-slate-500 border-t border-white/5 relative z-10">
-        &copy; {new Date().getFullYear()} ATB Software Solutions Private Limited. All enterprise data encrypted & stored in Neon PostgreSQL.
+        &copy; {new Date().getFullYear()} ATB Software. All enterprise data encrypted & stored in Neon PostgreSQL.
       </footer>
     </div>
   );
@@ -334,4 +259,3 @@ export default function LoginPage() {
     </Suspense>
   );
 }
-
