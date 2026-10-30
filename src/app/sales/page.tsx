@@ -348,10 +348,36 @@ function SalesContent() {
       });
 
       if (res.ok) {
+        const data = await res.json();
+        const orderNum = data.orderNumber || data.order?.orderNumber || 'New Order';
+        const invNum = data.invoice?.invoiceNumber || '';
         setIsOrderModalOpen(false);
         setOrderNotes('');
         setOrderDiscount('0');
-        loadData();
+        await loadData();
+        setConvertSuccessMsg(
+          `Success! Sales Order ${orderNum} was created and Commercial Tax Invoice ${invNum || ''} was generated.`
+        );
+        setTimeout(() => setConvertSuccessMsg(null), 8000);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function handleGenerateInvoiceForOrder(orderId: number) {
+    try {
+      const res = await fetch('/api/sales', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'generate_invoice', orderId }),
+      });
+      if (res.ok) {
+        const invoice = await res.json();
+        await loadData();
+        setSelectedInvoice(invoice);
+        setConvertSuccessMsg(`Commercial Tax Invoice ${invoice.invoiceNumber} successfully generated!`);
+        setTimeout(() => setConvertSuccessMsg(null), 6000);
       }
     } catch (err) {
       console.error(err);
@@ -810,6 +836,57 @@ function SalesContent() {
       {/* TAB 2: Sales Orders */}
       {activeTab === 'orders' && (
         <div className="space-y-4">
+          {/* Overview KPI Cards for Sales Orders & Invoicing */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-bold uppercase text-slate-400">Total Sales Orders</span>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mt-0.5">
+                  {orders.length}
+                </h3>
+              </div>
+              <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400">
+                <ShoppingCart className="w-5 h-5" />
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-bold uppercase text-slate-400">Invoices Generated</span>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mt-0.5">
+                  {orders.filter((o) => invoices.some((i) => i.salesOrderId === o.id)).length} Invoices
+                </h3>
+              </div>
+              <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400">
+                <FileText className="w-5 h-5" />
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-bold uppercase text-slate-400">Settled Invoices</span>
+                <h3 className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                  {invoices.filter((i) => i.status === 'Paid').length} Paid
+                </h3>
+              </div>
+              <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400">
+                <CheckCircle className="w-5 h-5" />
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-bold uppercase text-slate-400">Total Pipeline Value</span>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mt-0.5">
+                  ₹{orders.reduce((sum, o) => sum + o.totalAmount, 0).toLocaleString('en-IN')}
+                </h3>
+              </div>
+              <div className="p-2.5 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400">
+                <IndianRupee className="w-5 h-5" />
+              </div>
+            </div>
+          </div>
+
           {/* Filter Bar */}
           <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
             <div className="relative w-full sm:w-80">
@@ -851,63 +928,100 @@ function SalesContent() {
                     <th className="py-3 px-4 font-semibold">Items</th>
                     <th className="py-3 px-4 font-semibold text-right">Total</th>
                     <th className="py-3 px-4 font-semibold text-center">Status</th>
+                    <th className="py-3 px-4 font-semibold text-center">Tax Invoice</th>
                     <th className="py-3 px-4 font-semibold text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {filteredOrders.map((order) => (
-                    <tr key={order.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
-                      <td className="py-3.5 px-4 font-mono font-bold text-blue-600 dark:text-blue-400">
-                        {order.orderNumber}
-                      </td>
-                      <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-white">
-                        {order.customerName}
-                      </td>
-                      <td className="py-3.5 px-4 text-slate-500">
-                        {new Date(order.orderDate).toLocaleDateString()}
-                      </td>
-                      <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300">
-                        {order.itemsJson.map((i) => `${i.quantity}x ${i.productName}`).join(', ')}
-                      </td>
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="font-bold text-slate-900 dark:text-white">
-                          ₹{order.totalAmount.toLocaleString('en-IN')}
-                        </div>
-                        {Boolean(order.discountAmount && order.discountAmount > 0) && (
-                          <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
-                            Saved ₹{order.discountAmount.toLocaleString('en-IN')}
+                  {filteredOrders.map((order) => {
+                    const linkedInvoice = invoices.find((i) => i.salesOrderId === order.id);
+
+                    return (
+                      <tr key={order.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
+                        <td className="py-3.5 px-4 font-mono font-bold text-blue-600 dark:text-blue-400">
+                          {order.orderNumber}
+                        </td>
+                        <td className="py-3.5 px-4 font-semibold text-slate-900 dark:text-white">
+                          {order.customerName}
+                        </td>
+                        <td className="py-3.5 px-4 text-slate-500">
+                          {new Date(order.orderDate).toLocaleDateString()}
+                        </td>
+                        <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300">
+                          {order.itemsJson.map((i) => `${i.quantity}x ${i.productName}`).join(', ')}
+                        </td>
+                        <td className="py-3.5 px-4 text-right">
+                          <div className="font-bold text-slate-900 dark:text-white">
+                            ₹{order.totalAmount.toLocaleString('en-IN')}
                           </div>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-4 text-center">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                            order.orderStatus === 'Delivered'
-                              ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300'
-                              : order.orderStatus === 'Shipped'
-                              ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300'
-                              : 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300'
-                          }`}
-                        >
-                          {order.orderStatus}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-right">
-                        <select
-                          value={order.orderStatus}
-                          onChange={(e) =>
-                            handleUpdateOrderStatus(order.id, e.target.value as SalesOrder['orderStatus'])
-                          }
-                          className="text-[11px] font-medium bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-slate-700 dark:text-slate-300 focus:outline-none"
-                        >
-                          <option value="Confirmed">Confirmed</option>
-                          <option value="Processing">Processing</option>
-                          <option value="Shipped">Shipped</option>
-                          <option value="Delivered">Delivered</option>
-                        </select>
-                      </td>
-                    </tr>
-                  ))}
+                          {Boolean(order.discountAmount && order.discountAmount > 0) && (
+                            <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                              Saved ₹{order.discountAmount.toLocaleString('en-IN')}
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                              order.orderStatus === 'Delivered'
+                                ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300'
+                                : order.orderStatus === 'Shipped'
+                                ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300'
+                                : 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300'
+                            }`}
+                          >
+                            {order.orderStatus}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          {linkedInvoice ? (
+                            <div className="inline-flex items-center gap-1.5">
+                              <button
+                                onClick={() => setSelectedInvoice(linkedInvoice)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 font-mono text-[11px] font-bold transition-colors cursor-pointer"
+                                title="Click to view and print official tax invoice"
+                              >
+                                <FileText className="w-3.5 h-3.5" />
+                                <span>{linkedInvoice.invoiceNumber}</span>
+                              </button>
+                              <span
+                                className={`px-1.5 py-0.5 rounded-md text-[9px] font-bold ${
+                                  linkedInvoice.status === 'Paid'
+                                    ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300'
+                                    : 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
+                                }`}
+                              >
+                                {linkedInvoice.status}
+                              </span>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => handleGenerateInvoiceForOrder(order.id)}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[11px] shadow-xs cursor-pointer"
+                              title="Click to generate tax invoice for this order"
+                            >
+                              <Plus className="w-3 h-3" />
+                              <span>Generate Invoice</span>
+                            </button>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4 text-right">
+                          <select
+                            value={order.orderStatus}
+                            onChange={(e) =>
+                              handleUpdateOrderStatus(order.id, e.target.value as SalesOrder['orderStatus'])
+                            }
+                            className="text-[11px] font-medium bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-slate-700 dark:text-slate-300 focus:outline-none"
+                          >
+                            <option value="Confirmed">Confirmed</option>
+                            <option value="Processing">Processing</option>
+                            <option value="Shipped">Shipped</option>
+                            <option value="Delivered">Delivered</option>
+                          </select>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

@@ -261,7 +261,7 @@ export function Sidebar({
                     {displayName}
                   </div>
                   <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate flex items-center gap-1">
-                    <span>{currentUser?.isCompanyAdmin ? 'CEO' : displayRole}</span>
+                    <span>{currentUser?.isPlatformAdmin ? 'Super Admin' : currentUser?.isCompanyAdmin ? 'CEO' : displayRole}</span>
                     <span>•</span>
                     <span className="truncate">{currentCompany?.code || displayDept}</span>
                   </div>

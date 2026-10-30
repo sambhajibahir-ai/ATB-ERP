@@ -22,6 +22,10 @@ export const companies = pgTable('companies', {
   taxId: varchar('tax_id', { length: 100 }), // CIN / Reg No
   gstin: varchar('gstin', { length: 50 }),
   address: text('address'),
+  operationsName: varchar('operations_name', { length: 255 }),
+  registrationNumber: varchar('registration_number', { length: 100 }),
+  documentTypeNote: varchar('document_type_note', { length: 255 }),
+  currency: varchar('currency', { length: 50 }).default('INR (₹)'),
   status: varchar('status', { length: 30 }).notNull().default('Active'), // Active, Pending, Suspended, Expired
   licenseTier: varchar('license_tier', { length: 50 }).notNull().default('Enterprise'), // Trial, Starter, Growth, Enterprise
   licenseExpiresAt: timestamp('license_expires_at').notNull(),

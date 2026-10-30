@@ -29,9 +29,21 @@ import {
 import { hashPassword, verifyPassword, verifySessionToken, COOKIE_NAME } from './auth';
 import { getDb, isNeonConfigured } from '@/db';
 import * as schema from '@/db/schema';
-import { sql } from 'drizzle-orm';
+import { sql, eq } from 'drizzle-orm';
 import fs from 'fs';
 import path from 'path';
+
+// Helper to perform resilient asynchronous sync with live Neon PostgreSQL
+async function syncNeon(op: (db: NonNullable<ReturnType<typeof getDb>>) => Promise<unknown>): Promise<void> {
+  try {
+    const db = getDb();
+    if (db) {
+      await op(db);
+    }
+  } catch (err) {
+    console.warn('[Neon Sync]', err);
+  }
+}
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const STORE_FILE = path.join(DATA_DIR, 'store.json');
@@ -154,6 +166,51 @@ class EnterpriseDataStore {
       if (!fs.existsSync(DATA_DIR)) {
         fs.mkdirSync(DATA_DIR, { recursive: true });
       }
+
+      // Always guarantee Company 1 standards in persisted data
+      const comp1 = this.companies.find((c) => c.id === 1);
+      if (comp1) {
+        comp1.name = 'ATB Software';
+        comp1.taxId = 'CIN: U72200MH2026PTC******';
+        comp1.gstin = '27AABCU****R1Z*';
+        comp1.address = 'ATB Towers, Wagholi, Pune, Maharashtra 412207';
+        comp1.phone = '+91 20 4129 9000';
+        comp1.email = 'billing@atbsoftware.com';
+        comp1.operationsName = comp1.operationsName || 'ATB Software Enterprise Operations';
+        comp1.registrationNumber = comp1.registrationNumber || 'ATB-REG-2026-99';
+        comp1.documentTypeNote = comp1.documentTypeNote || 'Official Commercial Price Quotation';
+        comp1.currency = comp1.currency || 'INR (₹)';
+      }
+
+      // Always ensure converted orders keep their quotation discount
+      for (const order of this.salesOrders) {
+        if (order.notes && order.notes.includes('Converted from Quotation')) {
+          const match = order.notes.match(/QT-\d{4}-\d{4}/);
+          if (match) {
+            const q = this.quotations.find((quote) => quote.quotationNumber === match[0]);
+            if (q && q.discountAmount > 0 && (!order.discountAmount || order.discountAmount === 0)) {
+              order.discountAmount = q.discountAmount;
+              order.taxAmount = q.taxAmount;
+              order.totalAmount = q.totalAmount;
+              order.subtotal = q.subtotal;
+            }
+          }
+        }
+      }
+
+      // Always ensure invoices matching converted orders keep discount & total
+      for (const invoice of this.invoices) {
+        if (invoice.salesOrderId) {
+          const order = this.salesOrders.find((o) => o.id === invoice.salesOrderId);
+          if (order && order.discountAmount && order.discountAmount > 0) {
+            invoice.discountAmount = order.discountAmount;
+            invoice.taxAmount = order.taxAmount;
+            invoice.totalAmount = order.totalAmount;
+            invoice.subtotal = order.subtotal;
+          }
+        }
+      }
+
       const data = {
         companies: this.companies,
         users: this.users,
@@ -324,6 +381,29 @@ export async function createCompany(data: {
     'Platform Administration',
     `New tenant company registered: ${newCompany.name} (License: ${newCompany.licenseTier}, Status: ${newCompany.status})`
   );
+
+  syncNeon(async (db) => {
+    await db.insert(schema.companies).values({
+      name: newCompany.name,
+      code: newCompany.code,
+      email: newCompany.email,
+      phone: newCompany.phone || null,
+      taxId: newCompany.taxId || null,
+      gstin: newCompany.gstin || null,
+      address: newCompany.address || null,
+      operationsName: newCompany.operationsName || null,
+      registrationNumber: newCompany.registrationNumber || null,
+      documentTypeNote: newCompany.documentTypeNote || null,
+      currency: newCompany.currency || 'INR (₹)',
+      status: newCompany.status,
+      licenseTier: newCompany.licenseTier,
+      licenseExpiresAt: new Date(newCompany.licenseExpiresAt),
+      maxUsers: newCompany.maxUsers,
+      approvedBy: newCompany.approvedBy || null,
+      approvedAt: newCompany.approvedAt ? new Date(newCompany.approvedAt) : null,
+    });
+  });
+
   return newCompany;
 }
 
@@ -356,6 +436,18 @@ export async function approveCompany(companyId: number, approvedBy: string): Pro
     'Platform Administration',
     `Approved company ${company.name} (License: ${company.licenseTier}, Valid until: ${new Date(company.licenseExpiresAt).toLocaleDateString()})`
   );
+
+  syncNeon(async (db) => {
+    await db.update(schema.companies)
+      .set({
+        status: company.status,
+        approvedBy: company.approvedBy || null,
+        approvedAt: company.approvedAt ? new Date(company.approvedAt) : null,
+        licenseExpiresAt: new Date(company.licenseExpiresAt),
+      })
+      .where(eq(schema.companies.id, company.id));
+  });
+
   return { ...company };
 }
 
@@ -388,6 +480,24 @@ export async function updateCompanyProfile(
     `Updated company profile for ${company.name}`,
     company.id
   );
+
+  syncNeon(async (db) => {
+    await db.update(schema.companies)
+      .set({
+        name: company.name,
+        operationsName: company.operationsName || null,
+        registrationNumber: company.registrationNumber || null,
+        documentTypeNote: company.documentTypeNote || null,
+        taxId: company.taxId || null,
+        gstin: company.gstin || null,
+        email: company.email,
+        phone: company.phone || null,
+        address: company.address || null,
+        currency: company.currency || 'INR (₹)',
+      })
+      .where(eq(schema.companies.id, company.id));
+  });
+
   return { ...company };
 }
 
@@ -418,6 +528,18 @@ export async function updateCompanyLicense(
     'Platform Administration',
     `Updated license for ${company.name}: Tier=${company.licenseTier}, MaxUsers=${company.maxUsers}, Expires=${company.licenseExpiresAt}`
   );
+
+  syncNeon(async (db) => {
+    await db.update(schema.companies)
+      .set({
+        licenseTier: company.licenseTier,
+        licenseExpiresAt: new Date(company.licenseExpiresAt),
+        maxUsers: company.maxUsers,
+        status: company.status,
+      })
+      .where(eq(schema.companies.id, company.id));
+  });
+
   return { ...company };
 }
 
@@ -437,6 +559,13 @@ export async function toggleCompanyStatus(companyId: number, actor = 'Platform A
     'Platform Administration',
     `Set company status for ${company.name} to ${company.status}`
   );
+
+  syncNeon(async (db) => {
+    await db.update(schema.companies)
+      .set({ status: company.status })
+      .where(eq(schema.companies.id, company.id));
+  });
+
   return { ...company };
 }
 
@@ -457,6 +586,15 @@ export async function cancelCompanyLicense(companyId: number, actor = 'Platform 
     `Cancelled and revoked subscription license for ${company.name}. License expired and workspace suspended.`,
     companyId
   );
+
+  syncNeon(async (db) => {
+    await db.update(schema.companies)
+      .set({
+        licenseExpiresAt: new Date(company.licenseExpiresAt),
+        status: company.status,
+      })
+      .where(eq(schema.companies.id, company.id));
+  });
 
   return { ...company };
 }
@@ -664,6 +802,22 @@ export async function createUser(data: {
     'User Management',
     `Created sub-account ${newUser.name} (${newUser.email}) with role ${newUser.role} for company ${company.name}`
   );
+
+  syncNeon(async (db) => {
+    await db.insert(schema.users).values({
+      companyId: newUser.companyId,
+      name: newUser.name,
+      email: newUser.email,
+      passwordHash: newUser.passwordHash,
+      role: newUser.role,
+      department: newUser.department,
+      avatar: newUser.avatar || 'U',
+      status: newUser.status,
+      isCompanyAdmin: newUser.isCompanyAdmin,
+      isPlatformAdmin: newUser.isPlatformAdmin,
+    });
+  });
+
   const { passwordHash, ...safeUser } = newUser;
   return safeUser;
 }
@@ -686,6 +840,19 @@ export async function updateUser(
 
   store.persist();
   addAuditLog('Admin', 'Updated User', 'Administration', `Updated profile/credentials for ${user.email}`);
+
+  syncNeon(async (db) => {
+    await db.update(schema.users)
+      .set({
+        name: user.name,
+        role: user.role,
+        department: user.department,
+        status: user.status,
+        passwordHash: user.passwordHash,
+      })
+      .where(eq(schema.users.id, user.id));
+  });
+
   const { passwordHash, ...safeUser } = user;
   return safeUser;
 }
@@ -931,6 +1098,26 @@ export async function addProduct(data: Omit<Product, 'id' | 'createdAt' | 'statu
   store.products.unshift(newProduct);
   store.persist();
   addAuditLog('User', 'Created Product', 'Inventory', `Added product ${newProduct.name} (${newProduct.sku})`, targetCompanyId);
+
+  syncNeon(async (db) => {
+    await db.insert(schema.products).values({
+      companyId: newProduct.companyId,
+      sku: newProduct.sku,
+      name: newProduct.name,
+      description: newProduct.description || null,
+      category: newProduct.category,
+      unit: newProduct.unit || 'pcs',
+      costPrice: String(newProduct.costPrice),
+      sellingPrice: String(newProduct.sellingPrice),
+      currentStock: newProduct.currentStock,
+      minStock: newProduct.minStock,
+      maxStock: newProduct.maxStock,
+      warehouseLocation: newProduct.warehouseLocation || 'Warehouse Zone A-1',
+      barcode: newProduct.barcode || null,
+      status: newProduct.status,
+    });
+  });
+
   return newProduct;
 }
 
@@ -954,6 +1141,27 @@ export async function adjustProductStock(productId: number, quantityChange: numb
     `${product.sku}: ${quantityChange > 0 ? '+' : ''}${quantityChange} units (${reason}). New stock: ${product.currentStock}`,
     product.companyId
   );
+
+  syncNeon(async (db) => {
+    await db.update(schema.products)
+      .set({
+        currentStock: product.currentStock,
+        status: product.status,
+      })
+      .where(eq(schema.products.id, product.id));
+
+    await db.insert(schema.inventoryTransactions).values({
+      companyId: product.companyId,
+      productId: product.id,
+      productName: product.name,
+      sku: product.sku,
+      type: quantityChange >= 0 ? 'IN' : 'OUT',
+      quantity: Math.abs(quantityChange),
+      reference: reason.slice(0, 100),
+      notes: reason,
+      performedBy: 'System',
+    });
+  });
 
   return product;
 }
@@ -1042,6 +1250,27 @@ export async function createQuotation(data: {
     targetCompanyId
   );
 
+  syncNeon(async (db) => {
+    await db.insert(schema.quotations).values({
+      companyId: newQuote.companyId,
+      quotationNumber: newQuote.quotationNumber,
+      customerId: newQuote.customerId,
+      customerName: newQuote.customerName,
+      customerEmail: newQuote.customerEmail || null,
+      issueDate: new Date(newQuote.issueDate),
+      expiryDate: new Date(newQuote.expiryDate),
+      subtotal: String(newQuote.subtotal),
+      taxRate: String(newQuote.taxRate),
+      taxAmount: String(newQuote.taxAmount),
+      discountAmount: String(newQuote.discountAmount),
+      totalAmount: String(newQuote.totalAmount),
+      status: newQuote.status,
+      itemsJson: newQuote.itemsJson,
+      terms: newQuote.terms || null,
+      notes: newQuote.notes || null,
+    });
+  });
+
   return newQuote;
 }
 
@@ -1060,6 +1289,16 @@ export async function updateQuotationStatus(
     `${quote.quotationNumber} status set to ${status}`,
     quote.companyId
   );
+
+  syncNeon(async (db) => {
+    await db.update(schema.quotations)
+      .set({
+        status,
+        ...(quote.convertedSalesOrderId ? { convertedSalesOrderId: quote.convertedSalesOrderId } : {}),
+      })
+      .where(eq(schema.quotations.id, quote.id));
+  });
+
   return quote;
 }
 
@@ -1105,6 +1344,15 @@ export async function convertQuotationToSalesOrder(
     `Converted ${quote.quotationNumber} into ${salesOrder.orderNumber} (₹${salesOrder.totalAmount.toLocaleString('en-IN')})`,
     quote.companyId
   );
+
+  syncNeon(async (db) => {
+    await db.update(schema.quotations)
+      .set({
+        status: 'Converted',
+        convertedSalesOrderId: salesOrder.id,
+      })
+      .where(eq(schema.quotations.id, quote.id));
+  });
 
   return { salesOrder, quotation: quote };
 }
@@ -1236,6 +1484,45 @@ export async function createSalesOrder(data: {
     targetCompanyId
   );
 
+  syncNeon(async (db) => {
+    await db.insert(schema.salesOrders).values({
+      companyId: newOrder.companyId,
+      orderNumber: newOrder.orderNumber,
+      customerId: newOrder.customerId,
+      customerName: newOrder.customerName,
+      orderDate: new Date(newOrder.orderDate),
+      deliveryDate: newOrder.deliveryDate ? new Date(newOrder.deliveryDate) : null,
+      subtotal: String(newOrder.subtotal),
+      discountAmount: String(newOrder.discountAmount),
+      taxAmount: String(newOrder.taxAmount),
+      totalAmount: String(newOrder.totalAmount),
+      paymentStatus: newOrder.paymentStatus,
+      orderStatus: newOrder.orderStatus,
+      itemsJson: newOrder.itemsJson,
+      notes: newOrder.notes || null,
+    });
+
+    await db.insert(schema.invoices).values({
+      companyId: newInvoice.companyId,
+      invoiceNumber: newInvoice.invoiceNumber,
+      salesOrderId: newInvoice.salesOrderId || null,
+      customerId: newInvoice.customerId,
+      customerName: newInvoice.customerName,
+      customerEmail: newInvoice.customerEmail || null,
+      issueDate: new Date(newInvoice.issueDate),
+      dueDate: new Date(newInvoice.dueDate),
+      subtotal: String(newInvoice.subtotal),
+      discountAmount: String(newInvoice.discountAmount),
+      taxRate: String(newInvoice.taxRate),
+      taxAmount: String(newInvoice.taxAmount),
+      totalAmount: String(newInvoice.totalAmount),
+      amountPaid: String(newInvoice.amountPaid),
+      status: newInvoice.status,
+      itemsJson: newInvoice.itemsJson,
+      terms: newInvoice.terms || null,
+    });
+  });
+
   return newOrder;
 }
 
@@ -1248,6 +1535,13 @@ export async function updateSalesOrderStatus(
   order.orderStatus = status;
   store.persist();
   addAuditLog('User', 'Updated Order Status', 'Sales & CRM', `${order.orderNumber} set to ${status}`, order.companyId);
+
+  syncNeon(async (db) => {
+    await db.update(schema.salesOrders)
+      .set({ orderStatus: status })
+      .where(eq(schema.salesOrders.id, order.id));
+  });
+
   return order;
 }
 
@@ -1311,6 +1605,21 @@ export async function createPurchaseOrder(data: {
     targetCompanyId
   );
 
+  syncNeon(async (db) => {
+    await db.insert(schema.purchaseOrders).values({
+      companyId: newPO.companyId,
+      poNumber: newPO.poNumber,
+      supplierId: newPO.supplierId,
+      supplierName: newPO.supplierName,
+      orderDate: new Date(newPO.orderDate),
+      expectedDelivery: newPO.expectedDelivery ? new Date(newPO.expectedDelivery) : null,
+      totalAmount: String(newPO.totalAmount),
+      status: newPO.status,
+      itemsJson: newPO.itemsJson,
+      notes: newPO.notes || null,
+    });
+  });
+
   return newPO;
 }
 
@@ -1334,6 +1643,18 @@ export async function approvePurchaseOrder(
     `Purchase Order ${po.poNumber} for ${po.supplierName} (₹${po.totalAmount.toLocaleString('en-IN')}) approved and cleared for procurement`,
     po.companyId
   );
+
+  syncNeon(async (db) => {
+    await db.update(schema.purchaseOrders)
+      .set({
+        status: po.status,
+        approvedBy: po.approvedBy || null,
+        approvedAt: po.approvedAt ? new Date(po.approvedAt) : null,
+        rejectionReason: null,
+      })
+      .where(eq(schema.purchaseOrders.id, po.id));
+  });
+
   return po;
 }
 
@@ -1358,6 +1679,18 @@ export async function rejectPurchaseOrder(
     `Purchase Order ${po.poNumber} rejected. Reason: ${po.rejectionReason}`,
     po.companyId
   );
+
+  syncNeon(async (db) => {
+    await db.update(schema.purchaseOrders)
+      .set({
+        status: po.status,
+        approvedBy: po.approvedBy || null,
+        approvedAt: po.approvedAt ? new Date(po.approvedAt) : null,
+        rejectionReason: po.rejectionReason || null,
+      })
+      .where(eq(schema.purchaseOrders.id, po.id));
+  });
+
   return po;
 }
 
@@ -1375,6 +1708,13 @@ export async function transmitPurchaseOrder(poId: number): Promise<PurchaseOrder
     `Purchase Order ${po.poNumber} transmitted to vendor ${po.supplierName}. Delivery tracking initiated.`,
     po.companyId
   );
+
+  syncNeon(async (db) => {
+    await db.update(schema.purchaseOrders)
+      .set({ status: po.status })
+      .where(eq(schema.purchaseOrders.id, po.id));
+  });
+
   return po;
 }
 
@@ -1387,6 +1727,13 @@ export async function updatePurchaseOrderStatus(
   po.status = status;
   store.persist();
   addAuditLog('User', 'Updated PO Status', 'Purchasing', `${po.poNumber} status set to ${status}`, po.companyId);
+
+  syncNeon(async (db) => {
+    await db.update(schema.purchaseOrders)
+      .set({ status: po.status })
+      .where(eq(schema.purchaseOrders.id, po.id));
+  });
+
   return po;
 }
 
@@ -1414,6 +1761,13 @@ export async function receivePurchaseOrder(poId: number): Promise<PurchaseOrder 
 
   store.persist();
   addAuditLog('User', 'Received Purchase Order', 'Purchasing', `Goods received for ${po.poNumber}. Stock updated.`, po.companyId);
+
+  syncNeon(async (db) => {
+    await db.update(schema.purchaseOrders)
+      .set({ status: po.status })
+      .where(eq(schema.purchaseOrders.id, po.id));
+  });
+
   return po;
 }
 
@@ -1423,6 +1777,81 @@ export async function receivePurchaseOrder(poId: number): Promise<PurchaseOrder 
 export async function getInvoices(companyId?: number): Promise<Invoice[]> {
   const targetId = await getEffectiveCompanyId(companyId);
   return store.invoices.filter((i) => (i.companyId || 1) === targetId);
+}
+
+export async function getInvoiceBySalesOrderId(salesOrderId: number): Promise<Invoice | null> {
+  return store.invoices.find((i) => i.salesOrderId === salesOrderId) || null;
+}
+
+export async function generateInvoiceForSalesOrder(salesOrderId: number): Promise<Invoice | null> {
+  const order = store.salesOrders.find((o) => o.id === salesOrderId);
+  if (!order) return null;
+
+  // Check if invoice already exists
+  const existing = store.invoices.find((i) => i.salesOrderId === order.id);
+  if (existing) return existing;
+
+  let custEmail = 'billing@client.com';
+  const cust = store.customers.find((c) => c.id === order.customerId);
+  if (cust) custEmail = cust.email;
+
+  const nextInvoiceId = store.invoices.reduce((max, i) => Math.max(max, i.id || 0), 0) + 1;
+  const newInvoice: Invoice = {
+    id: nextInvoiceId,
+    companyId: order.companyId || 1,
+    invoiceNumber: `INV-2026-${String(store.invoices.length + 49).padStart(4, '0')}`,
+    salesOrderId: order.id,
+    customerId: order.customerId,
+    customerName: order.customerName,
+    customerEmail: custEmail,
+    issueDate: new Date().toISOString(),
+    dueDate: new Date(Date.now() + 30 * 86400000).toISOString(),
+    subtotal: order.subtotal,
+    discountAmount: order.discountAmount || 0,
+    taxRate: 18,
+    taxAmount: order.taxAmount,
+    totalAmount: order.totalAmount,
+    amountPaid: 0,
+    status: 'Unpaid',
+    itemsJson: order.itemsJson,
+    terms: 'Net 30 days. Standard enterprise warranty applies.',
+    createdAt: new Date().toISOString(),
+  };
+
+  store.invoices.unshift(newInvoice);
+  store.persist();
+
+  addAuditLog(
+    'User',
+    'Generated Invoice',
+    'Finance & Accounts',
+    `Generated ${newInvoice.invoiceNumber} for ${order.orderNumber} (₹${newInvoice.totalAmount.toLocaleString('en-IN')})`,
+    order.companyId
+  );
+
+  syncNeon(async (db) => {
+    await db.insert(schema.invoices).values({
+      companyId: newInvoice.companyId,
+      invoiceNumber: newInvoice.invoiceNumber,
+      salesOrderId: newInvoice.salesOrderId || null,
+      customerId: newInvoice.customerId,
+      customerName: newInvoice.customerName,
+      customerEmail: newInvoice.customerEmail || null,
+      issueDate: new Date(newInvoice.issueDate),
+      dueDate: new Date(newInvoice.dueDate),
+      subtotal: String(newInvoice.subtotal),
+      discountAmount: String(newInvoice.discountAmount),
+      taxRate: String(newInvoice.taxRate),
+      taxAmount: String(newInvoice.taxAmount),
+      totalAmount: String(newInvoice.totalAmount),
+      amountPaid: String(newInvoice.amountPaid),
+      status: newInvoice.status,
+      itemsJson: newInvoice.itemsJson,
+      terms: newInvoice.terms || null,
+    });
+  });
+
+  return newInvoice;
 }
 
 export async function markInvoicePaid(invoiceId: number): Promise<Invoice | null> {
@@ -1445,6 +1874,16 @@ export async function markInvoicePaid(invoiceId: number): Promise<Invoice | null
 
   store.persist();
   addAuditLog('User', 'Marked Invoice Paid', 'Finance & Accounts', `Invoice ${invoice.invoiceNumber} paid in full`, invoice.companyId);
+
+  syncNeon(async (db) => {
+    await db.update(schema.invoices)
+      .set({
+        amountPaid: String(invoice.amountPaid),
+        status: invoice.status,
+      })
+      .where(eq(schema.invoices.id, invoice.id));
+  });
+
   return invoice;
 }
 
@@ -1484,6 +1923,21 @@ export async function addFinancialTransaction(
     targetCompanyId
   );
 
+  syncNeon(async (db) => {
+    await db.insert(schema.financialTransactions).values({
+      companyId: newTx.companyId,
+      txNumber: newTx.txNumber,
+      date: new Date(newTx.date),
+      type: newTx.type,
+      category: newTx.category,
+      amount: String(newTx.amount),
+      paymentMethod: newTx.paymentMethod || null,
+      reference: newTx.reference || null,
+      status: newTx.status,
+      description: newTx.description || null,
+    });
+  });
+
   return newTx;
 }
 
@@ -1508,6 +1962,23 @@ export async function addEmployee(data: Omit<Employee, 'id' | 'employeeCode' | '
   store.employees.unshift(newEmp);
   store.persist();
   addAuditLog('User', 'Added Employee', 'Human Resources', `Onboarded ${newEmp.firstName} ${newEmp.lastName} (${newEmp.department})`, targetCompanyId);
+
+  syncNeon(async (db) => {
+    await db.insert(schema.employees).values({
+      companyId: newEmp.companyId,
+      employeeCode: newEmp.employeeCode,
+      firstName: newEmp.firstName,
+      lastName: newEmp.lastName,
+      email: newEmp.email,
+      phone: newEmp.phone || null,
+      department: newEmp.department,
+      position: newEmp.position,
+      salary: String(newEmp.salary),
+      joinDate: new Date(newEmp.joinDate),
+      status: newEmp.status || 'Active',
+    });
+  });
+
   return newEmp;
 }
 
@@ -1570,6 +2041,16 @@ export async function updateWorkOrderStatus(
   if (typeof progress === 'number') order.progress = progress;
   store.persist();
   addAuditLog('User', 'Updated Work Order', 'Operations', `${order.orderNumber} status set to ${status}`, order.companyId);
+
+  syncNeon(async (db) => {
+    await db.update(schema.workOrders)
+      .set({
+        status: order.status,
+        ...(typeof progress === 'number' ? { progress } : {}),
+      })
+      .where(eq(schema.workOrders.id, order.id));
+  });
+
   return order;
 }
 
@@ -1594,6 +2075,17 @@ export function addAuditLog(actor: string, action: string, module: string, detai
   };
   store.auditLogs.unshift(log);
   store.persist();
+
+  syncNeon(async (db) => {
+    await db.insert(schema.auditLogs).values({
+      companyId: log.companyId,
+      actor: log.actor,
+      action: log.action,
+      module: log.module,
+      details: log.details || null,
+    });
+  });
+
   return log;
 }
 
@@ -1610,9 +2102,8 @@ export async function seedNeonDatabase(): Promise<{ success: boolean; message: s
   }
 
   try {
-    // 1. Create tables if not exist (DDL statements for Neon)
-    await db.execute(sql`
-      CREATE TABLE IF NOT EXISTS companies (
+    const ddlStatements = [
+      `CREATE TABLE IF NOT EXISTS companies (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         code VARCHAR(50) UNIQUE NOT NULL,
@@ -1621,6 +2112,10 @@ export async function seedNeonDatabase(): Promise<{ success: boolean; message: s
         tax_id VARCHAR(100),
         gstin VARCHAR(50),
         address TEXT,
+        operations_name VARCHAR(255),
+        registration_number VARCHAR(100),
+        document_type_note VARCHAR(255),
+        currency VARCHAR(50) DEFAULT 'INR (₹)',
         status VARCHAR(30) NOT NULL DEFAULT 'Active',
         license_tier VARCHAR(50) NOT NULL DEFAULT 'Enterprise',
         license_expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -1628,9 +2123,13 @@ export async function seedNeonDatabase(): Promise<{ success: boolean; message: s
         approved_by VARCHAR(255),
         approved_at TIMESTAMP WITH TIME ZONE,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-      );
+      )`,
+      `ALTER TABLE companies ADD COLUMN IF NOT EXISTS operations_name VARCHAR(255)`,
+      `ALTER TABLE companies ADD COLUMN IF NOT EXISTS registration_number VARCHAR(100)`,
+      `ALTER TABLE companies ADD COLUMN IF NOT EXISTS document_type_note VARCHAR(255)`,
+      `ALTER TABLE companies ADD COLUMN IF NOT EXISTS currency VARCHAR(50) DEFAULT 'INR (₹)'`,
 
-      CREATE TABLE IF NOT EXISTS users (
+      `CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         company_id INTEGER NOT NULL DEFAULT 1,
         name VARCHAR(255) NOT NULL,
@@ -1644,9 +2143,9 @@ export async function seedNeonDatabase(): Promise<{ success: boolean; message: s
         is_platform_admin BOOLEAN NOT NULL DEFAULT FALSE,
         last_login TIMESTAMP WITH TIME ZONE,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-      );
+      )`,
 
-      CREATE TABLE IF NOT EXISTS customers (
+      `CREATE TABLE IF NOT EXISTS customers (
         id SERIAL PRIMARY KEY,
         company_id INTEGER NOT NULL DEFAULT 1,
         code VARCHAR(50) UNIQUE NOT NULL,
@@ -1660,9 +2159,9 @@ export async function seedNeonDatabase(): Promise<{ success: boolean; message: s
         outstanding_balance NUMERIC(12, 2) DEFAULT 0.00,
         status VARCHAR(20) DEFAULT 'Active',
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-      );
+      )`,
 
-      CREATE TABLE IF NOT EXISTS suppliers (
+      `CREATE TABLE IF NOT EXISTS suppliers (
         id SERIAL PRIMARY KEY,
         company_id INTEGER NOT NULL DEFAULT 1,
         code VARCHAR(50) UNIQUE NOT NULL,
@@ -1675,9 +2174,9 @@ export async function seedNeonDatabase(): Promise<{ success: boolean; message: s
         rating INTEGER DEFAULT 5,
         status VARCHAR(20) DEFAULT 'Active',
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-      );
+      )`,
 
-      CREATE TABLE IF NOT EXISTS products (
+      `CREATE TABLE IF NOT EXISTS products (
         id SERIAL PRIMARY KEY,
         company_id INTEGER NOT NULL DEFAULT 1,
         sku VARCHAR(50) UNIQUE NOT NULL,
@@ -1690,13 +2189,13 @@ export async function seedNeonDatabase(): Promise<{ success: boolean; message: s
         current_stock INTEGER DEFAULT 0 NOT NULL,
         min_stock INTEGER DEFAULT 10 NOT NULL,
         max_stock INTEGER DEFAULT 1000 NOT NULL,
-        warehouse_location VARCHAR(100) DEFAULT 'Main Warehouse',
+        warehouse_location VARCHAR(100) DEFAULT 'Warehouse Zone A-1',
         barcode VARCHAR(100),
         status VARCHAR(20) DEFAULT 'Active',
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-      );
+      )`,
 
-      CREATE TABLE IF NOT EXISTS quotations (
+      `CREATE TABLE IF NOT EXISTS quotations (
         id SERIAL PRIMARY KEY,
         company_id INTEGER NOT NULL DEFAULT 1,
         quotation_number VARCHAR(50) UNIQUE NOT NULL,
@@ -1716,9 +2215,9 @@ export async function seedNeonDatabase(): Promise<{ success: boolean; message: s
         terms TEXT,
         notes TEXT,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-      );
+      )`,
 
-      CREATE TABLE IF NOT EXISTS sales_orders (
+      `CREATE TABLE IF NOT EXISTS sales_orders (
         id SERIAL PRIMARY KEY,
         company_id INTEGER NOT NULL DEFAULT 1,
         order_number VARCHAR(50) UNIQUE NOT NULL,
@@ -1735,9 +2234,9 @@ export async function seedNeonDatabase(): Promise<{ success: boolean; message: s
         items_json JSONB NOT NULL,
         notes TEXT,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-      );
+      )`,
 
-      CREATE TABLE IF NOT EXISTS purchase_orders (
+      `CREATE TABLE IF NOT EXISTS purchase_orders (
         id SERIAL PRIMARY KEY,
         company_id INTEGER NOT NULL DEFAULT 1,
         po_number VARCHAR(50) UNIQUE NOT NULL,
@@ -1753,9 +2252,9 @@ export async function seedNeonDatabase(): Promise<{ success: boolean; message: s
         items_json JSONB NOT NULL,
         notes TEXT,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-      );
+      )`,
 
-      CREATE TABLE IF NOT EXISTS invoices (
+      `CREATE TABLE IF NOT EXISTS invoices (
         id SERIAL PRIMARY KEY,
         company_id INTEGER NOT NULL DEFAULT 1,
         invoice_number VARCHAR(50) UNIQUE NOT NULL,
@@ -1766,6 +2265,7 @@ export async function seedNeonDatabase(): Promise<{ success: boolean; message: s
         issue_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         due_date TIMESTAMP WITH TIME ZONE NOT NULL,
         subtotal NUMERIC(12, 2) NOT NULL,
+        discount_amount NUMERIC(12, 2) DEFAULT 0.00,
         tax_rate NUMERIC(5, 2) DEFAULT 18.00,
         tax_amount NUMERIC(12, 2) NOT NULL,
         total_amount NUMERIC(12, 2) NOT NULL,
@@ -1774,9 +2274,24 @@ export async function seedNeonDatabase(): Promise<{ success: boolean; message: s
         items_json JSONB NOT NULL,
         terms TEXT,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-      );
+      )`,
+      `ALTER TABLE invoices ADD COLUMN IF NOT EXISTS discount_amount NUMERIC(12, 2) DEFAULT 0.00`,
 
-      CREATE TABLE IF NOT EXISTS financial_transactions (
+      `CREATE TABLE IF NOT EXISTS inventory_transactions (
+        id SERIAL PRIMARY KEY,
+        company_id INTEGER NOT NULL DEFAULT 1,
+        product_id INTEGER NOT NULL,
+        product_name VARCHAR(255) NOT NULL,
+        sku VARCHAR(50) NOT NULL,
+        type VARCHAR(30) NOT NULL,
+        quantity INTEGER NOT NULL,
+        reference VARCHAR(100),
+        notes TEXT,
+        performed_by VARCHAR(255) DEFAULT 'System',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )`,
+
+      `CREATE TABLE IF NOT EXISTS financial_transactions (
         id SERIAL PRIMARY KEY,
         company_id INTEGER NOT NULL DEFAULT 1,
         tx_number VARCHAR(50) UNIQUE NOT NULL,
@@ -1789,9 +2304,9 @@ export async function seedNeonDatabase(): Promise<{ success: boolean; message: s
         status VARCHAR(20) DEFAULT 'Completed',
         description TEXT,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-      );
+      )`,
 
-      CREATE TABLE IF NOT EXISTS employees (
+      `CREATE TABLE IF NOT EXISTS employees (
         id SERIAL PRIMARY KEY,
         company_id INTEGER NOT NULL DEFAULT 1,
         employee_code VARCHAR(50) UNIQUE NOT NULL,
@@ -1805,9 +2320,26 @@ export async function seedNeonDatabase(): Promise<{ success: boolean; message: s
         join_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         status VARCHAR(20) DEFAULT 'Active',
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-      );
+      )`,
 
-      CREATE TABLE IF NOT EXISTS audit_logs (
+      `CREATE TABLE IF NOT EXISTS work_orders (
+        id SERIAL PRIMARY KEY,
+        company_id INTEGER NOT NULL DEFAULT 1,
+        order_number VARCHAR(50) UNIQUE NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        product_name VARCHAR(255),
+        quantity INTEGER DEFAULT 1 NOT NULL,
+        priority VARCHAR(20) DEFAULT 'Medium',
+        status VARCHAR(30) DEFAULT 'In Progress',
+        assigned_to VARCHAR(255),
+        progress INTEGER DEFAULT 0 NOT NULL,
+        start_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        due_date TIMESTAMP WITH TIME ZONE,
+        notes TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )`,
+
+      `CREATE TABLE IF NOT EXISTS audit_logs (
         id SERIAL PRIMARY KEY,
         company_id INTEGER NOT NULL DEFAULT 1,
         actor VARCHAR(255) NOT NULL,
@@ -1815,83 +2347,72 @@ export async function seedNeonDatabase(): Promise<{ success: boolean; message: s
         module VARCHAR(100) NOT NULL,
         details TEXT,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-      );
-    `);
+      )`
+    ];
 
-    // 2. Insert Companies if empty
+    for (const ddl of ddlStatements) {
+      await db.execute(sql.raw(ddl));
+    }
+
     let count = 0;
-    const existingCompanies = await db.select().from(schema.companies).limit(1);
-    if (existingCompanies.length === 0) {
-      for (const comp of initialCompanies) {
+    // Companies
+    const existingComp = await db.select().from(schema.companies).limit(1);
+    if (existingComp.length === 0) {
+      for (const comp of store.companies) {
         await db.insert(schema.companies).values({
+          id: comp.id,
           name: comp.name,
           code: comp.code,
           email: comp.email,
-          phone: comp.phone,
-          taxId: comp.taxId,
-          gstin: comp.gstin,
-          address: comp.address,
+          phone: comp.phone || null,
+          taxId: comp.taxId || null,
+          gstin: comp.gstin || null,
+          address: comp.address || null,
+          operationsName: comp.operationsName || null,
+          registrationNumber: comp.registrationNumber || null,
+          documentTypeNote: comp.documentTypeNote || null,
+          currency: comp.currency || 'INR (₹)',
           status: comp.status,
           licenseTier: comp.licenseTier,
           licenseExpiresAt: new Date(comp.licenseExpiresAt),
           maxUsers: comp.maxUsers,
-          approvedBy: comp.approvedBy,
+          approvedBy: comp.approvedBy || null,
           approvedAt: comp.approvedAt ? new Date(comp.approvedAt) : null,
         });
         count++;
       }
+      await db.execute(sql`SELECT setval('companies_id_seq', (SELECT COALESCE(MAX(id), 1) FROM companies))`);
     }
 
-    // 3. Insert Products if empty
-    const existingProducts = await db.select().from(schema.products).limit(1);
-    if (existingProducts.length === 0) {
-      for (const p of initialProducts) {
-        await db.insert(schema.products).values({
-          companyId: p.companyId || 1,
-          sku: p.sku,
-          name: p.name,
-          description: p.description,
-          category: p.category,
-          unit: p.unit,
-          costPrice: p.costPrice.toString(),
-          sellingPrice: p.sellingPrice.toString(),
-          currentStock: p.currentStock,
-          minStock: p.minStock,
-          maxStock: p.maxStock,
-          warehouseLocation: p.warehouseLocation,
-          barcode: p.barcode,
-          status: p.status,
-        });
-        count++;
-      }
-    }
-
-    // 4. Insert Customers if empty
+    // Customers
     const existingCust = await db.select().from(schema.customers).limit(1);
     if (existingCust.length === 0) {
-      for (const c of initialCustomers) {
+      for (const c of store.customers) {
         await db.insert(schema.customers).values({
+          id: c.id,
           companyId: c.companyId || 1,
           code: c.code,
           name: c.name,
           email: c.email,
-          phone: c.phone,
-          company: c.company,
-          taxNumber: c.taxNumber,
-          address: c.address,
-          creditLimit: c.creditLimit.toString(),
-          outstandingBalance: c.outstandingBalance.toString(),
+          phone: c.phone || null,
+          company: c.company || null,
+          taxNumber: c.taxNumber || null,
+          address: c.address || null,
+          creditLimit: String(c.creditLimit),
+          outstandingBalance: String(c.outstandingBalance),
           status: c.status,
         });
         count++;
       }
+      await db.execute(sql`SELECT setval('customers_id_seq', (SELECT COALESCE(MAX(id), 1) FROM customers))`);
     }
 
-    // 5. Insert Users if empty
+    // Users
     const existingUsers = await db.select().from(schema.users).limit(1);
     if (existingUsers.length === 0) {
-      for (const u of initialUsers) {
+      for (const u of store.users) {
         await db.insert(schema.users).values({
+          id: u.id,
           companyId: u.companyId || 1,
           name: u.name,
           email: u.email,
@@ -1905,11 +2426,38 @@ export async function seedNeonDatabase(): Promise<{ success: boolean; message: s
         });
         count++;
       }
+      await db.execute(sql`SELECT setval('users_id_seq', (SELECT COALESCE(MAX(id), 1) FROM users))`);
+    }
+
+    // Products
+    const existingProd = await db.select().from(schema.products).limit(1);
+    if (existingProd.length === 0) {
+      for (const p of store.products) {
+        await db.insert(schema.products).values({
+          id: p.id,
+          companyId: p.companyId || 1,
+          sku: p.sku,
+          name: p.name,
+          description: p.description || null,
+          category: p.category,
+          unit: p.unit || 'pcs',
+          costPrice: String(p.costPrice),
+          sellingPrice: String(p.sellingPrice),
+          currentStock: p.currentStock,
+          minStock: p.minStock,
+          maxStock: p.maxStock,
+          warehouseLocation: p.warehouseLocation || 'Warehouse Zone A-1',
+          barcode: p.barcode || null,
+          status: p.status,
+        });
+        count++;
+      }
+      await db.execute(sql`SELECT setval('products_id_seq', (SELECT COALESCE(MAX(id), 1) FROM products))`);
     }
 
     return {
       success: true,
-      message: 'Successfully initialized Neon PostgreSQL schema and seeded enterprise data!',
+      message: 'Successfully initialized Neon PostgreSQL schema and verified enterprise data persistence!',
       rowsInserted: count,
     };
   } catch (error: unknown) {
